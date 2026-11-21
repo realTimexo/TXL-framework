@@ -1,0 +1,14 @@
+{
+  "name": "TXL All Features",
+  "version": "1.0.0",
+  "developer": "Timexo",
+  "description": "A hands-on showcase of current TXL controls, runtime state, actions, components and layouts.",
+  "start": "main.txl",
+  "icon": "assets/app.ico",
+  "window": {
+    "width": 980,
+    "height": 940,
+    "resizable": true,
+    "background": "#111827"
+  }
+}

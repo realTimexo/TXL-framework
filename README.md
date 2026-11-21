@@ -56,8 +56,9 @@ The compiler supports persistent string state, input and checkbox binding, basic
 - [Starter](Examples/Starter): broader control and language showcase.
 - [Calculator](Examples/Calculator): two bound numeric inputs and add/subtract/multiply/divide actions.
 - [TodoList](Examples/TodoList): add tasks, tick them complete, remove them, and retain the list across launches.
+- [AllFeatures](Examples/AllFeatures): a single annotated `main.txl` demonstrating the currently implemented language, runtime, component, dialog, layout, and class-action features.
 
-Build a sample on Windows from its directory with `powershell -ExecutionPolicy Bypass -File .\build.ps1`, or run `dotnet run --project .\Compiler\Txl.Cli -- build .\Examples\Calculator` from the repository root.
+Validate and preview it on Windows with `dotnet run --project .\Compiler\Txl.Cli -- check .\Examples\AllFeatures` and `dotnet run --project .\Compiler\Txl.Cli -- preview .\Examples\AllFeatures`. Build a sample from its directory with `powershell -ExecutionPolicy Bypass -File .\build.ps1`, or run `dotnet run --project .\Compiler\Txl.Cli -- build .\Examples\Calculator` from the repository root.
 
 ## CLI and VS Code
 
