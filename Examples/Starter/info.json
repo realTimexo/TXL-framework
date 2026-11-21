@@ -1,0 +1,14 @@
+{
+  "name": "TXL Starter",
+  "version": "1.0.1",
+  "developer": "Timexo",
+  "description": "A small native Windows desktop app built with TXL.",
+  "start": "main.txl",
+  "icon": "assets/app.ico",
+  "window": {
+    "width": 900,
+    "height": 620,
+    "resizable": true,
+    "background": "#20202A"
+  }
+}

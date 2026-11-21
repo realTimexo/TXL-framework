@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.txl-generated/
+**/dist/
+*.vsix
+.vscode-test/
+.DS_Store

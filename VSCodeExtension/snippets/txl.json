@@ -1,0 +1,22 @@
+{
+  "group": {
+    "prefix": "group",
+    "body": ["group = ${1:name} (", "  ${0}", ")"],
+    "description": "Create a TXL group block"
+  },
+  "button": {
+    "prefix": "button",
+    "body": ["button = ${1:Label}"],
+    "description": "Create a native TXL button"
+  },
+  "style": {
+    "prefix": "style",
+    "body": ["style (", "  main:", "    font = Arial", "    background = #20202A", "    color = #F4F7FB", ")"],
+    "description": "Create a TXL style block"
+  },
+  "text": {
+    "prefix": "text",
+    "body": ["text = "],
+    "description": "Add a TXL text label"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "name": "txl-language",
+  "displayName": "TXL Language Support",
+  "description": "Syntax highlighting and editor support for Timexo Language",
+  "icon": "icons/txl-language.png",
+  "version": "0.5.0",
+  "publisher": "timexo",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:txl",
+    "onCommand:txl.preview"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "txl.preview",
+        "title": "TXL: Preview Active Project"
+      }
+    ],
+    "languages": [
+      {
+        "id": "txl",
+        "aliases": [
+          "TXL",
+          "txl"
+        ],
+        "extensions": [
+          ".txl"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/txl-language.png",
+          "dark": "./icons/txl-language.png"
+        }
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "txl-file-icons",
+        "label": "TXL File Icons",
+        "path": "./txl-icon-theme.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "txl",
+        "scopeName": "source.txl",
+        "path": "./syntaxes/txl.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "txl",
+        "path": "./snippets/txl.json"
+      }
+    ]
+  },
+  "scripts": {
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.26.1"
+  }
+}

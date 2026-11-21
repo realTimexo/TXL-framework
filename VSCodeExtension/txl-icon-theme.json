@@ -1,0 +1,10 @@
+{
+  "iconDefinitions": {
+    "_txl": {
+      "iconPath": "./icons/txl-language.png"
+    }
+  },
+  "fileExtensions": {
+    "txl": "_txl"
+  }
+}
