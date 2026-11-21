@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">TXL — A small language for native Windows apps</title>
+  <desc id="desc">A deep navy TXL branded card with the repository logo, native WPF positioning, and compiler language identity.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111f"/><stop offset="1" stop-color="#102a40"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#2da6d8" stop-opacity=".25"/><stop offset="1" stop-color="#2da6d8" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M36 0H0V36" fill="none" stroke="#b9d4e8" stroke-opacity=".06"/></pattern>
+  </defs>
+  <rect width="1200" height="630" rx="34" fill="url(#bg)"/>
+  <rect width="1200" height="630" rx="34" fill="url(#grid)"/>
+  <ellipse cx="910" cy="290" rx="360" ry="300" fill="url(#glow)"/>
+  <image href="/assets/txl-logo.png" x="86" y="78" width="105" height="105"/>
+  <text x="216" y="143" fill="#e9f3f9" font-family="Segoe UI,Arial,sans-serif" font-weight="700" font-size="39" letter-spacing="-1">TXL</text>
+  <text x="86" y="304" fill="#f3f6f8" font-family="Segoe UI,Arial,sans-serif" font-weight="750" font-size="76" letter-spacing="-3">A small language.</text>
+  <text x="86" y="394" fill="#43b7ee" font-family="Segoe UI,Arial,sans-serif" font-weight="750" font-size="76" letter-spacing="-3">A real Windows app.</text>
+  <text x="90" y="465" fill="#a7b6c8" font-family="Segoe UI,Arial,sans-serif" font-size="25">Readable TXL source  /  Native WPF  /  .NET 9</text>
+  <rect x="86" y="523" width="12" height="12" rx="6" fill="#c0e879"/>
+  <text x="113" y="535" fill="#b4c6d5" font-family="Consolas,monospace" font-size="18">txl.wuaze.com</text>
+  <path d="M867 210h206v34H867zm0 63h155v18H867zm0 46h228v18H867zm0 46h164v18H867zm0 46h204v18H867z" fill="#43b7ee" fill-opacity=".18"/>
+  <rect x="824" y="180" width="302" height="252" rx="18" fill="#091624" stroke="#4e8eb0" stroke-opacity=".55"/>
+  <circle cx="852" cy="204" r="5" fill="#f2b46b"/><circle cx="870" cy="204" r="5" fill="#6b8298"/><circle cx="888" cy="204" r="5" fill="#6b8298"/>
+  <text x="854" y="257" fill="#43b7ee" font-family="Consolas,monospace" font-size="19">windows (</text>
+  <text x="872" y="291" fill="#f2bf78" font-family="Consolas,monospace" font-size="17">mode:</text>
+  <text x="943" y="291" fill="#c0e879" font-family="Consolas,monospace" font-size="17">maximized</text>
+  <text x="854" y="326" fill="#43b7ee" font-family="Consolas,monospace" font-size="19">)</text>
+  <text x="854" y="376" fill="#43b7ee" font-family="Consolas,monospace" font-size="19">text.headline =</text>
+  <text x="854" y="407" fill="#e7b1d3" font-family="Consolas,monospace" font-size="17">"Ship a window"</text>
+</svg>

@@ -8,6 +8,7 @@
     { "include": "#groupHeader" },
     { "include": "#blockHeader" },
     { "include": "#styleSection" },
+    { "include": "#mediaSource" },
     { "include": "#element" },
     { "include": "#property" },
     { "include": "#keywords" }
@@ -29,7 +30,7 @@
     },
     "actions": {
       "name": "support.function.txl",
-      "match": "\\b(open|page|alert)(?=\\s*\\()"
+      "match": "\\b(open|page|alert|success|confirm|prompt)(?=\\s*\\()"
     },
     "groupHeader": {
       "match": "^\\s*(group)\\s*(=)\\s*([A-Za-z_][\\w-]*)\\s*(\\()",
@@ -41,7 +42,7 @@
       }
     },
     "blockHeader": {
-      "match": "^\\s*(style|if|repeat)\\s*(?:=\\s*([^\\(]+))?\\s*(\\()",
+      "match": "^\\s*(style|actions|windows|if|repeat|component|for)\\b(?:\\s*=\\s*([^\\(]+))?\\s*(\\()",
       "captures": {
         "1": { "name": "keyword.control.txl" },
         "2": { "name": "variable.other.txl" },
@@ -55,16 +56,29 @@
         "2": { "name": "punctuation.section.block.begin.txl" }
       }
     },
+    "mediaSource": {
+      "name": "meta.media-source.txl",
+      "begin": "^\\s*(image|video)\\s*=\\s*",
+      "beginCaptures": {
+        "1": { "name": "support.type.element.txl" }
+      },
+      "end": "$",
+      "patterns": [
+        { "name": "constant.other.media-url.txl", "match": "https?://[^\\s\"']+" },
+        { "name": "string.unquoted.media-path.txl", "match": "[^\\s#]+" }
+      ]
+    },
     "element": {
-      "match": "^\\s*(text|button|image|input|checkbox|line|space)(?:\\(([^)]+)\\))?\\s*(=)?",
+      "match": "^\\s*(text|button|image|video|input|checkbox|list|line|space)(?:\\(([^)]+)\\)|\\.([A-Za-z][\\w-]*))?\\s*(=)?",
       "captures": {
         "1": { "name": "support.type.element.txl" },
         "2": { "name": "storage.modifier.txl" },
-        "3": { "name": "keyword.operator.assignment.txl" }
+        "3": { "name": "entity.name.function.txl" },
+        "4": { "name": "keyword.operator.assignment.txl" }
       }
     },
     "property": {
-      "match": "^\\s*(font|size|color|background|weight|radius|padding|margin|width|height|opacity|align|shadow|border|hover|cursor|layout|action|placeholder|bind)\\s*(=|:)",
+      "match": "^\\s*(font|size|color|background|weight|radius|padding|margin|width|height|opacity|align|shadow|border|hover|cursor|layout|position|x|y|action|placeholder|bind|value|checked|autoplay|loop|stretch)\\s*(=|:)",
       "captures": {
         "1": { "name": "support.type.property-name.txl" },
         "2": { "name": "keyword.operator.assignment.txl" }
@@ -73,7 +87,7 @@
     "keywords": {
       "patterns": [
         { "name": "punctuation.section.block.end.txl", "match": "^\\s*\\)\\s*$" },
-        { "name": "keyword.control.txl", "match": "^\\s*(set|if|repeat)\\b" }
+        { "name": "keyword.control.txl", "match": "^\\s*(set|state|if|repeat|for|component)\\b" }
       ]
     }
   }

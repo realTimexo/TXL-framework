@@ -45,6 +45,20 @@ Test("runtime state persists and math handles invalid input and divide by zero",
     var output = WpfEmitter.Emit(new ProjectInfo("Test App", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
     if (!output.Contains("state.json") || !output.Contains("LocalApplicationData") || !output.Contains("right!=0") || !output.Contains("Invalid input or division by zero")) throw new Exception("persistence or safe math path missing");
 });
+Test("persistent state uses project identity instead of an overridden window title", () =>
+{
+    var parsed = Parser.Parse("windows (\ntitle: Custom Display Title\n)\nstate = visits:0");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var output = WpfEmitter.Emit(new ProjectInfo("Stable Project Name", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!output.Contains("Custom Display Title") || !output.Contains("appName=m.GetProperty(\"Name\").GetString()??\"TXL\"") || !output.Contains("string.Concat(appName.Select") || output.Contains("string.Concat(Title!.Select")) throw new Exception("window title changed the persistent state folder");
+});
+Test("Enter key filters map to the WPF Return key", () =>
+{
+    var parsed = Parser.Parse("actions (\nsearch(keydown):\nkey = Enter\nalert = Submitted\n)\ninput(search) = Query");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var output = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!output.Contains("requested.Equals(\"Enter\",StringComparison.OrdinalIgnoreCase))requested=\"Return\"")) throw new Exception("Enter key name is not normalized for WPF");
+});
 Test("todo list emits persistent completion and removal controls", () =>
 {
     var parsed = Parser.Parse("state = tasks:[]\ninput = New task\nstate = task:\nlist = tasks\nbutton = Add\naction = listAdd(tasks,task)");
@@ -134,6 +148,54 @@ Test("invalid semver rejected", () =>
     var directory = TempProject("one", "main.txl");
     try { var result = ProjectValidator.Validate(directory); if (!result.Diagnostics.Any(d => d.Message.Contains("Invalid version"))) throw new Exception("version accepted"); }
     finally { Directory.Delete(directory, true); }
+});
+Test("dotted text.headline syntax maps to large text", () =>
+{
+    var parsed = Parser.Parse("text.headline = TXL headline");
+    if (parsed.Program?.Nodes[0] is not Element { Kind: "text", Variant: "headline", Value: "TXL headline" }) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("variant is") || !emitted.Contains("headline") || !emitted.Contains("?30:16")) throw new Exception("headline default size was not emitted");
+});
+Test("windows block overrides title icon size and mode", () =>
+{
+    var parsed = Parser.Parse("windows (\ntitle: A TXL window\nicon: assets/app.ico\nsize: 1200x800\nmode: fullscreen\n)\ntext = Hello");
+    if (parsed.Program is null || WindowCatalog.Settings["size"] != "1200x800") throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Default", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo(900, 600)), parsed.Program, ".");
+    if (!emitted.Contains("WindowStyle.None") || !emitted.Contains("WindowState=WindowState.Maximized") || !emitted.Contains("ResolveContentPath(icon)")) throw new Exception("fullscreen, icon, or title metadata runtime missing");
+    if (!WpfEmitter.ProjectFile(new ProjectInfo("Default", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo())).Contains("content/assets/app.ico")) throw new Exception("windows icon was not packaged as app icon");
+});
+Test("windows block rejects invalid mode and size", () =>
+{
+    var badMode = Parser.Parse("windows (\nmode: tiny\n)\ntext = x");
+    var badSize = Parser.Parse("windows (\nsize: 100x100\n)\ntext = x");
+    if (!badMode.Diagnostics.Any(d => d.Message.Contains("Window mode must")) || !badSize.Diagnostics.Any(d => d.Message.Contains("Window size must"))) throw new Exception("invalid window setting accepted");
+});
+Test("image style size applies dimensions and URL is kept as a safe media URI", () =>
+{
+    var parsed = Parser.Parse("style (\nbrandImage:\nsize = 128\n)\ngroup = canvas (\nlayout = absolute\nimage(brandImage) = https://example.com/logo.png\nposition = x18 y3\n)");
+    if (parsed.Program is null || parsed.Program.Nodes[0] is not Group { Children: [Element { Kind: "image", Value: "https://example.com/logo.png", Properties: var props }] } || props["position"] != "x18 y3") throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("image.Width=dimension;image.Height=dimension") || !emitted.Contains("Remote media URLs must use HTTP or HTTPS") || !emitted.Contains("x18 y3")) throw new Exception("image sizing, URL safety, or declarative position missing");
+});
+Test("video emits native playback controls and supports HTTP(S) assets", () =>
+{
+    var parsed = Parser.Parse("group = media (\nvideo = https://example.com/demo.mp4\nautoplay = false\nloop = true\n)");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("MediaElement") || !emitted.Contains("media.Play()") || !emitted.Contains("media.Pause()") || !emitted.Contains("LoadedBehavior=autoplay?MediaState.Play:MediaState.Manual")) throw new Exception("video player runtime was not generated");
+});
+Test("keydown class action filters keys and can execute runtime actions", () =>
+{
+    var parsed = Parser.Parse("actions (\nsearch(keydown):\nkey = Enter\nset = result,submitted\n)\ninput(search) = Search\nstate = result:");
+    if (parsed.Program is null || ActionCatalog.Actions["search.keydown"].Count != 2) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("ApplyKeyboardEvents(element,variant)") || !emitted.Contains("Enum.TryParse<Key>")) throw new Exception("keyboard key event was not wired to the class");
+});
+Test("position syntax and video flags receive actionable diagnostics", () =>
+{
+    var badPosition = Parser.Parse("style (\ncard:\nposition = left top\n)\ntext = x");
+    var badVideo = Parser.Parse("video = assets/clip.mp4\nautoplay = maybe");
+    if (!badPosition.Diagnostics.Any(d => d.Message.Contains("Position must use")) || !badVideo.Diagnostics.Any(d => d.Message.Contains("must be true or false"))) throw new Exception("invalid property was not diagnosed");
 });
 Console.WriteLine($"{passed} passed, {failed} failed.");
 if (failed > 0) Environment.ExitCode = 1;

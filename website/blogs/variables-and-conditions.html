@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variables and If Statements in TXL | Journal</title>
+<meta name="description" content="A practical TXL tutorial distinguishing compile-time set values from persistent runtime state, with interpolation and if statement examples.">
+<meta name="keywords" content="TXL variables tutorial, TXL if, TXL compile-time values, persistent state, TXL language">
+<meta name="robots" content="index,follow"><link rel="canonical" href="https://txl.wuaze.com/blogs/variables-and-conditions.html">
+<link rel="icon" type="image/png" href="/assets/txl-logo.png"><link rel="stylesheet" href="/assets/site.css"><script defer src="/assets/site.js"></script>
+<meta property="og:type" content="article"><meta property="og:title" content="Variables and If Statements in TXL"><meta property="og:description" content="Learn the difference between TXL source expansion and runtime values that persist between app launches."><meta property="og:url" content="https://txl.wuaze.com/blogs/variables-and-conditions.html"><meta property="og:site_name" content="TXL"><meta property="og:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="TXL: a small language for building native Windows apps."><meta property="og:image:type" content="image/png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Variables and If Statements in TXL"><meta name="twitter:description" content="Learn compile-time values, if comparisons, and runtime persistence in TXL."><meta name="twitter:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Variables and If Statements in TXL","description":"Learn the difference between compile-time values and persistent runtime state in TXL.","datePublished":"2026-11-21","dateModified":"2026-11-21","author":{"@type":"Organization","name":"TXL"},"publisher":{"@type":"Organization","name":"TXL","url":"https://txl.wuaze.com/"},"mainEntityOfPage":"https://txl.wuaze.com/blogs/variables-and-conditions.html"}</script>
+</head><body><header class="site-header"><div class="wrap nav-row"><a class="brand" href="/" aria-label="TXL home"><img src="/assets/txl-logo.png" alt="" width="37" height="37"><span>TXL<small>Timexo Language</small></span></a><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="primary-nav">Menu</button><nav class="nav-links" id="primary-nav" data-nav aria-label="Primary navigation"><a href="/docs/">Language</a><a href="/features.html">What it does</a><a href="/getting-started.html">Get started</a><a href="/blogs/" aria-current="page">Journal</a><a class="nav-cta" href="https://github.com/realTimexo/TXL-framework">View source</a></nav></div></header>
+<main class="wrap"><section class="page-hero"><div class="eyebrow">Language basics / 5 minute read</div><h1>Variables and `if`: two kinds of value.</h1><p>TXL makes a useful distinction: some values help generate the app source, while others change when a person uses the app. Mixing those concepts is a common source of confusion.</p></section><div class="content-layout"><nav class="toc" aria-label="Article contents"><a href="#set">Compile-time `set`</a><a href="#if">Conditions</a><a href="#state">Runtime state</a><a href="#choose">Choose the right one</a></nav><article class="prose"><p class="article-meta"><span class="article-tag">TXL language</span><time datetime="2026-11-21">21 November 2026</time></p>
+<h2 id="set">`set` exists while compiling</h2><p>Declare a value as `set = name:value`, then interpolate it with `${name}`. TXL substitutes the value during compilation. The running app does not keep a live connection to that declaration.</p><pre>set = username:Ada
+set = level:admin
+
+text = Welcome, ${username}.
+text = Access level: ${level}</pre><p>This is convenient for labels or repeated copy. It is not a user profile or an editable setting.</p>
+<h2 id="if">Use `if` to include or skip source</h2><p>An `if` block also runs at compile time. TXL compares strings without case sensitivity; `==` means equal and `!=` means not equal.</p><pre>set = access:admin
+
+if = access == admin (
+  text = You can manage this list.
+)
+
+if = access != admin (
+  text = You can view this list.
+)</pre><p>Because the test is resolved before the EXE runs, it cannot react to a value the user enters later. `if = true (` and `if = false (` are also supported.</p>
+<h2 id="state">Use `state` for values the app changes</h2><p>Runtime state is different. Declare it with `state = key:initial-value`; bind an input with `bind = key`. TXL saves the current value under the user's local application data and restores it on a later launch.</p><pre>state = visitor:Ada
+
+input = Enter a name
+bind = visitor
+
+text = Current name:
+text = Ada
+bind = visitor</pre><p>Actions can also update values: use `set`, `append`, `clear`, `toggle`, or `math` where supported by the control. The saved state is local to the Windows user profile; it is not synchronized between machines.</p>
+<h2 id="choose">A quick decision rule</h2><ul><li>Need to reuse a constant or select a source block at build time? Use `set` and `if`.</li><li>Need a form input, checkbox, calculator display, or todo item to change? Use runtime `state` and a binding or action.</li><li>Need a native message to the user? Attach `alert("message")` to a button, or define an `alert = message` class action.</li></ul><p>The full examples are in the <a href="/docs/variables.html">variables and alerts reference</a>. Then try the <a href="/getting-started.html">compiler quick start</a> and run `txl --check` before building.</p><div class="page-end">More: <a href="/blogs/native-alerts-and-keyboard.html">native alerts and Enter-key actions</a> · <a href="/blogs/">all journal articles</a>.</div></article></div></main><footer class="site-footer"><div class="wrap footer-row"><div>TXL · Timexo Language · © <span data-current-year>2026</span></div><nav class="footer-links" aria-label="Footer"><a href="/docs/">Docs</a><a href="/downloads.html">Releases</a><a href="/changelog.html">Changelog</a><a href="/contributing.html">Contribute</a><a href="https://github.com/realTimexo/TXL-framework">GitHub</a></nav></div></footer></body></html>

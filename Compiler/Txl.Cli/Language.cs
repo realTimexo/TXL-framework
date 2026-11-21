@@ -21,7 +21,7 @@ public sealed record ComponentCall(string Name, Dictionary<string, string> Argum
 public sealed record ActionOperation(string Name, string Value);
 public sealed record ProgramAst(List<Node> Nodes);
 public sealed record ParseResult(ProgramAst? Program, List<Diagnostic> Diagnostics);
-public sealed record WindowInfo(int Width = 900, int Height = 600, bool Resizable = true, string Background = "#20202A");
+public sealed record WindowInfo(int Width = 900, int Height = 600, bool Resizable = true, string Background = "#20202A", string Mode = "normal", string? Title = null);
 public sealed record ProjectInfo(string Name, string Version, string Developer, string Description, string Start, string? Icon, WindowInfo Window);
 public sealed record ValidationResult(ProjectInfo? Info, List<Diagnostic> Diagnostics);
 
@@ -87,6 +87,7 @@ public sealed class Parser
         ActionCatalog.Reset();
         ComponentCatalog.Reset();
         RuntimeStateCatalog.Reset();
+        WindowCatalog.Reset();
         var diagnostics = new List<Diagnostic>();
         var parser = new Parser(Lexer.Lines(text, file, diagnostics), diagnostics);
         var nodes = parser.ReadBlock(false);
@@ -115,6 +116,12 @@ public sealed class Parser
             if (Regex.IsMatch(source, @"^actions\s*\($", RegexOptions.IgnoreCase))
             {
                 ReadActionsBlock(file, token);
+                continue;
+            }
+
+            if (Regex.IsMatch(source, @"^windows\s*\($", RegexOptions.IgnoreCase))
+            {
+                ReadWindowsBlock(file, token);
                 continue;
             }
 
@@ -208,28 +215,31 @@ public sealed class Parser
             var property = Regex.Match(source, @"^([A-Za-z][\w-]*)\s*(?::|=)\s*(.*)$");
             if (property.Success && IsKnownProperty(property.Groups[1].Value))
             {
+                CheckProperty(file, token, property.Groups[1].Value, Unquote(property.Groups[2].Value));
                 if (groupProperties is not null) groupProperties[property.Groups[1].Value] = Unquote(property.Groups[2].Value);
                 else diagnostics.Add(new(file, token.Line, token.Column, Severity.Warning, $"Property '{property.Groups[1].Value}' is outside a group or element and will be ignored."));
                 continue;
             }
 
-            var element = Regex.Match(source, @"^([A-Za-z][\w-]*)(?:\(([^)]+)\))?\s*(?:=\s*(.*))?$");
+            var element = Regex.Match(source, @"^([A-Za-z][\w-]*)(?:\(([^)]+)\)|\.([A-Za-z][\w-]*))?\s*(?:=\s*(.*))?$");
             if (element.Success)
             {
                 var kind = element.Groups[1].Value.ToLowerInvariant();
-                if (kind is not ("text" or "button" or "image" or "input" or "checkbox" or "list" or "line" or "space"))
+                if (kind is not ("text" or "button" or "image" or "video" or "input" or "checkbox" or "list" or "line" or "space"))
                 {
                     diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Unknown command '{kind}'."));
                     continue;
                 }
-                var variant = element.Groups[2].Success ? element.Groups[2].Value : null;
-                var value = element.Groups[3].Success ? Unquote(element.Groups[3].Value) : string.Empty;
+                var variant = element.Groups[2].Success ? element.Groups[2].Value : element.Groups[3].Success ? element.Groups[3].Value : null;
+                var value = element.Groups[4].Success ? Unquote(element.Groups[4].Value) : string.Empty;
                 var properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 while (position < lines.Count)
                 {
-                    var next = lines[position].Token.Value.Trim();
-                    var match = Regex.Match(next, @"^(action|placeholder|bind|value|checked|x|y)\s*(?::|=)\s*(.*)$", RegexOptions.IgnoreCase);
+                    var (propertyToken, propertyFile) = lines[position];
+                    var next = propertyToken.Value.Trim();
+                    var match = Regex.Match(next, @"^(action|placeholder|bind|value|checked|x|y|position|size|width|height|stretch|autoplay|loop)\s*(?::|=)\s*(.*)$", RegexOptions.IgnoreCase);
                     if (!match.Success) break;
+                    CheckProperty(propertyFile, propertyToken, match.Groups[1].Value, Unquote(match.Groups[2].Value));
                     properties[match.Groups[1].Value] = Unquote(match.Groups[2].Value);
                     position++;
                 }
@@ -292,6 +302,7 @@ public sealed class Parser
                     diagnostics.Add(new(file, propertyToken.Line, propertyToken.Column, Severity.Error, "Expected a style property such as 'color = white'."));
                     continue;
                 }
+                CheckProperty(file, propertyToken, property.Groups[1].Value, Unquote(property.Groups[2].Value));
                 StyleCatalog.Add(styleName, property.Groups[1].Value, Unquote(property.Groups[2].Value));
             }
             if (!sectionClosed)
@@ -311,7 +322,7 @@ public sealed class Parser
             var (token, _) = lines[position++];
             var source = token.Value.Trim();
             if (source == ")") return;
-            var heading = Regex.Match(source, @"^([A-Za-z][\w-]*)\((click|hover)\)\s*:\s*$", RegexOptions.IgnoreCase);
+            var heading = Regex.Match(source, @"^([A-Za-z][\w-]*)\((click|hover|keydown)\)\s*:\s*$", RegexOptions.IgnoreCase);
             if (!heading.Success)
             {
                 diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Expected an event section such as 'card(click):' or 'card(hover):'."));
@@ -324,7 +335,7 @@ public sealed class Parser
                 var (operationToken, _) = lines[position++];
                 var operationLine = operationToken.Value.Trim();
                 if (operationLine == ")") return;
-                if (Regex.IsMatch(operationLine, @"^[A-Za-z][\w-]*\((click|hover)\)\s*:\s*$", RegexOptions.IgnoreCase))
+                if (Regex.IsMatch(operationLine, @"^[A-Za-z][\w-]*\((click|hover|keydown)\)\s*:\s*$", RegexOptions.IgnoreCase))
                 {
                     position--;
                     break;
@@ -362,6 +373,67 @@ public sealed class Parser
         return result;
     }
 
+    private void ReadWindowsBlock(string file, Token opening)
+    {
+        while (position < lines.Count)
+        {
+            var (token, _) = lines[position++];
+            var source = token.Value.Trim();
+            if (source == ")") return;
+            var setting = Regex.Match(source, @"^(title|icon|size|mode)\s*(?::|=)\s*(.*)$", RegexOptions.IgnoreCase);
+            if (!setting.Success)
+            {
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Expected a windows setting: title, icon, size, or mode."));
+                continue;
+            }
+            var name = setting.Groups[1].Value.ToLowerInvariant();
+            var value = Unquote(setting.Groups[2].Value);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Window setting '{name}' cannot be empty."));
+                continue;
+            }
+            if (name == "size")
+            {
+                var match = Regex.Match(value, @"^(\d{3,4})\s*[x×]\s*(\d{3,4})$", RegexOptions.IgnoreCase);
+                if (!match.Success || !int.TryParse(match.Groups[1].Value, out var width) || !int.TryParse(match.Groups[2].Value, out var height) || width is < 200 or > 7680 || height is < 150 or > 4320)
+                {
+                    diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Window size must be WIDTHxHEIGHT with width 200–7680 and height 150–4320 (for example, 1100x760)."));
+                    continue;
+                }
+                WindowCatalog.Settings[name] = $"{width}x{height}";
+                continue;
+            }
+            if (name == "mode" && value.ToLowerInvariant() is not ("normal" or "maximized" or "fullscreen" or "borderless"))
+            {
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Window mode must be normal, maximized, fullscreen, or borderless."));
+                continue;
+            }
+            if (name == "icon" && (Path.IsPathRooted(value) || value.Split('/', '\\').Any(part => part == "..") || value.Contains(':')))
+            {
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Window icon must be a relative path inside the project, such as assets/app.ico."));
+                continue;
+            }
+            WindowCatalog.Settings[name] = value;
+        }
+        var (last, lastFile) = lines.Count > 0 ? lines[^1] : (opening, file);
+        diagnostics.Add(new(lastFile, last.Line, last.Column, Severity.Error, "Missing closing ')' for the windows block."));
+    }
+
+    private void CheckProperty(string file, Token token, string name, string value)
+    {
+        var normalized = name.ToLowerInvariant();
+        if (normalized == "position" && !Regex.IsMatch(value, @"^x\s*-?\d+(?:\.\d+)?\s+y\s*-?\d+(?:\.\d+)?$", RegexOptions.IgnoreCase))
+            diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Position must use 'xNUMBER yNUMBER', for example 'position = x18 y3'."));
+        if (normalized is "size" or "width" or "height" or "x" or "y")
+        {
+            if (!double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number) || number < 0 || number > 10000)
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Property '{name}' must be a number between 0 and 10000."));
+        }
+        if ((normalized is "autoplay" or "loop") && !bool.TryParse(value, out _))
+            diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Property '{name}' must be true or false."));
+    }
+
     private static bool TryAssignment(string source, string command, out string value)
     {
         var match = Regex.Match(source, "^" + Regex.Escape(command) + @"\s*=\s*(.*)$", RegexOptions.IgnoreCase);
@@ -369,7 +441,7 @@ public sealed class Parser
         return match.Success;
     }
 
-    private static bool IsKnownProperty(string name) => name.ToLowerInvariant() is "font" or "size" or "color" or "background" or "weight" or "radius" or "padding" or "margin" or "width" or "height" or "opacity" or "align" or "shadow" or "border" or "hover" or "cursor" or "layout" or "x" or "y";
+    private static bool IsKnownProperty(string name) => name.ToLowerInvariant() is "font" or "size" or "color" or "background" or "weight" or "radius" or "padding" or "margin" or "width" or "height" or "opacity" or "align" or "shadow" or "border" or "hover" or "cursor" or "layout" or "x" or "y" or "position";
 
     private static string Unquote(string value)
     {
@@ -413,6 +485,12 @@ public static class RuntimeStateCatalog
     public static void Reset() => Initial.Clear();
 }
 
+public static class WindowCatalog
+{
+    public static readonly Dictionary<string, string> Settings = new(StringComparer.OrdinalIgnoreCase);
+    public static void Reset() => Settings.Clear();
+}
+
 public static class ProjectValidator
 {
     public static ValidationResult Validate(string directory)
@@ -447,6 +525,8 @@ public static class ProjectValidator
             var height = 600;
             var resizable = true;
             var background = "#20202A";
+            var mode = "normal";
+            string? windowTitle = null;
             if (root.TryGetProperty("window", out var window))
             {
                 if (window.ValueKind != JsonValueKind.Object) diagnostics.Add(new(path, 1, 1, Severity.Error, "window must be an object."));
@@ -457,11 +537,22 @@ public static class ProjectValidator
                     if (width is < 200 or > 7680 || height is < 150 or > 4320) diagnostics.Add(new(path, 1, 1, Severity.Error, "Window size must have width 200–7680 and height 150–4320."));
                     if (window.TryGetProperty("resizable", out var resize) && resize.ValueKind is JsonValueKind.True or JsonValueKind.False) resizable = resize.GetBoolean();
                     if (window.TryGetProperty("background", out var color) && color.ValueKind == JsonValueKind.String) background = color.GetString()!;
+                    if (window.TryGetProperty("title", out var titleValue))
+                    {
+                        if (titleValue.ValueKind == JsonValueKind.String) windowTitle = titleValue.GetString();
+                        else diagnostics.Add(new(path, 1, 1, Severity.Error, "window.title must be a string."));
+                    }
+                    if (window.TryGetProperty("mode", out var modeValue))
+                    {
+                        if (modeValue.ValueKind == JsonValueKind.String) mode = modeValue.GetString()!;
+                        else diagnostics.Add(new(path, 1, 1, Severity.Error, "window.mode must be a string."));
+                    }
+                    if (mode.ToLowerInvariant() is not ("normal" or "maximized" or "fullscreen" or "borderless")) diagnostics.Add(new(path, 1, 1, Severity.Error, "Window mode must be normal, maximized, fullscreen, or borderless."));
                 }
             }
             if (!SafeRelative(start) || !File.Exists(Path.Combine(directory, start))) diagnostics.Add(new(path, 1, 1, Severity.Error, $"Start file '{start}' is missing or has an invalid path."));
             if (!string.IsNullOrWhiteSpace(icon) && (!SafeRelative(icon) || !File.Exists(Path.Combine(directory, icon)))) diagnostics.Add(new(path, 1, 1, Severity.Error, $"Icon '{icon}' is missing or has an invalid asset path."));
-            info = new ProjectInfo(name, version, developer, description, start, icon, new WindowInfo(width, height, resizable, background));
+            info = new ProjectInfo(name, version, developer, description, start, icon, new WindowInfo(width, height, resizable, background, mode, windowTitle));
         }
         catch (JsonException error) { diagnostics.Add(new(path, 1, 1, Severity.Error, "Invalid JSON: " + error.Message)); }
         return new(info, diagnostics);

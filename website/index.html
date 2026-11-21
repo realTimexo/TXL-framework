@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TXL — A small language for native Windows apps</title>
+  <meta name="description" content="TXL is a line-oriented language and .NET compiler for native Windows WPF applications. Learn the syntax, install the CLI, and build a real desktop app.">
+  <meta name="keywords" content="TXL language, WPF compiler, Windows desktop development, .NET 9, TXL CLI">
+  <meta name="robots" content="index,follow">
+  <link rel="canonical" href="https://txl.wuaze.com/">
+  <link rel="icon" type="image/png" href="/assets/txl-logo.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="TXL — A small language for native Windows apps">
+  <meta property="og:description" content="Write readable TXL source and compile it into a native Windows WPF application.">
+  <meta property="og:url" content="https://txl.wuaze.com/">
+  <meta property="og:site_name" content="TXL">
+  <meta property="og:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="TXL: a small language for building native Windows apps.">
+  <meta property="og:image:type" content="image/png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TXL — A small language for native Windows apps">
+  <meta name="twitter:description" content="A readable, line-oriented language and compiler for native Windows WPF apps.">
+  <meta name="twitter:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script defer src="/assets/site.js"></script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"TXL","applicationCategory":"DeveloperApplication","operatingSystem":"Windows","softwareVersion":"0.6.0","description":"A line-oriented language and compiler for native Windows WPF desktop apps.","license":"https://github.com/realTimexo/TXL-framework/blob/main/LICENSE","url":"https://txl.wuaze.com/","downloadUrl":"https://github.com/realTimexo/TXL-framework/releases","codeRepository":"https://github.com/realTimexo/TXL-framework","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap nav-row">
+      <a class="brand" href="/" aria-label="TXL home"><img src="/assets/txl-logo.png" alt="" width="37" height="37"><span>TXL<small>Timexo Language</small></span></a>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="primary-nav">Menu</button>
+      <nav class="nav-links" id="primary-nav" data-nav aria-label="Primary navigation">
+        <a href="/docs/">Language</a><a href="/features.html">What it does</a><a href="/getting-started.html">Get started</a><a href="/blogs/">Journal</a><a class="nav-cta" href="https://github.com/realTimexo/TXL-framework">View source</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section class="wrap hero">
+      <div class="reveal">
+        <div class="eyebrow">TXL 0.6.0 · Native Windows builds</div>
+        <h1>A small language.<br><em>A real Windows app.</em></h1>
+        <p class="hero-copy"><strong>TXL turns readable, line-by-line source into a native WPF desktop application.</strong> Define a window, arrange controls, bind simple state, then build a self-contained Windows executable.</p>
+        <div class="hero-actions"><a class="button" href="/getting-started.html">Build your first app <span aria-hidden="true">→</span></a><a class="button secondary" href="/docs/">Read the language guide</a></div>
+        <p class="hero-note">Open source · MIT license · .NET 9 SDK required to build · Windows required to run WPF apps</p>
+      </div>
+      <div class="editor-card reveal" aria-label="Example TXL source code">
+        <div class="editor-top"><span>main.txl</span><span class="editor-dots" aria-hidden="true"><i></i><i></i><i></i></span></div>
+        <div class="editor-body"><span class="code-line"><span class="ln">01</span><span class="kw">windows</span> (</span><span class="code-line"><span class="ln">02</span>  <span class="prop">title:</span> <span class="value">Reading List</span></span><span class="code-line"><span class="ln">03</span>  <span class="prop">mode:</span> <span class="value">normal</span></span><span class="code-line"><span class="ln">04</span>)</span><span class="code-line"><span class="ln">05</span></span><span class="code-line"><span class="ln">06</span><span class="kw">group</span> = home (</span><span class="code-line"><span class="ln">07</span>  <span class="kw">layout</span> = <span class="value">vertical</span></span><span class="code-line"><span class="ln">08</span>  <span class="kw">text.headline</span> = <span class="str">What are you reading?</span></span><span class="code-line"><span class="ln">09</span>  <span class="kw">input</span> = <span class="str">Add a title</span></span><span class="code-line"><span class="ln">10</span>  <span class="kw">button</span>(save) = <span class="str">Save book</span></span><span class="code-line"><span class="ln">11</span>)</span></div>
+        <div class="code-caption">SOURCE → TXL COMPILER → WINDOWS WPF APP</div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="wrap">
+        <div class="section-head reveal"><div><div class="eyebrow">A focused toolchain</div><h2>From source file to desktop window.</h2></div><p class="section-intro">TXL keeps its grammar compact and its outputs explicit. It is for people who want a small, understandable way to describe a native desktop interface—not a claim to replace the whole .NET ecosystem.</p></div>
+        <div class="grid">
+          <article class="card reveal"><span class="number">01 / DESCRIBE</span><h3>Readable by design</h3><p>One instruction per line. Parenthesized blocks define styles, windows, actions, and groups without indentation-based scope.</p></article>
+          <article class="card reveal"><span class="number">02 / COMPILE</span><h3>Real WPF output</h3><p>The compiler generates a .NET 9 WPF app and can publish a self-contained Windows x64 executable.</p></article>
+          <article class="card reveal"><span class="number">03 / ITERATE</span><h3>Useful while you learn</h3><p>Check syntax in the CLI. Use VS Code completions and snippets. On Windows, open a native preview before publishing.</p></article>
+        </div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="wrap feature-line">
+        <div class="reveal"><div class="eyebrow">The current language</div><h2>Small features. Clear limits.</h2><p class="section-intro">Current capabilities include controls, classes, compile-time expansion, persisted string state, native dialogs, and Windows media playback. The docs say what is implemented and what is not.</p><p><a href="/features.html">Explore the implemented features →</a></p></div>
+        <div class="feature-list reveal"><div class="feature-row"><strong>Window + layout</strong><span>Title, icon, size, mode, vertical/horizontal groups, absolute positions.</span></div><div class="feature-row"><strong>Controls + state</strong><span>Text, button, image, video, input, checkbox, saved todo list.</span></div><div class="feature-row"><strong>Actions</strong><span>Click, hover, and filtered key-down actions with native message boxes.</span></div><div class="feature-row"><strong>Tooling</strong><span>Global `txl` command, helpful CLI diagnostics, and VS Code language support.</span></div></div>
+      </div>
+    </section>
+    <section class="section">
+      <div class="wrap"><div class="cta-band reveal"><div><h2>Try the compiler from your project folder.</h2><p>Install the current GitHub release, then run `txl --check` or `txl --build`.</p></div><a class="button" href="/getting-started.html">See install steps <span aria-hidden="true">→</span></a></div></div>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="wrap footer-row"><div>TXL · Timexo Language <span>© <span data-current-year>2026</span></span></div><nav class="footer-links" aria-label="Footer"><a href="/docs/">Docs</a><a href="/downloads.html">Releases</a><a href="/changelog.html">Changelog</a><a href="/contributing.html">Contribute</a><a href="/blogs/">Journal</a><a href="https://github.com/realTimexo/TXL-framework">GitHub</a></nav></div></footer>
+</body>
+</html>

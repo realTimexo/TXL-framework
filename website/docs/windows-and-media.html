@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TXL Windows, Images and Video | Reference</title>
+<meta name="description" content="Configure TXL window title, icon, size and mode; size images, play local or remote videos, set Canvas positions, and handle Enter key events.">
+<meta name="keywords" content="TXL windows block, TXL image sizing, TXL video, WPF MediaElement, TXL keyboard actions">
+<meta name="robots" content="index,follow"><link rel="canonical" href="https://txl.wuaze.com/docs/windows-and-media.html">
+<link rel="icon" type="image/png" href="/assets/txl-logo.png"><link rel="stylesheet" href="/assets/site.css"><script defer src="/assets/site.js"></script>
+<meta property="og:type" content="article"><meta property="og:title" content="TXL Windows, Images and Video"><meta property="og:description" content="A reference for native window modes, media, coordinates, and keyboard input in TXL."><meta property="og:url" content="https://txl.wuaze.com/docs/windows-and-media.html"><meta property="og:site_name" content="TXL"><meta property="og:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="TXL: a small language for building native Windows apps."><meta property="og:image:type" content="image/png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="TXL Windows, Images and Video"><meta name="twitter:description" content="A reference for window modes, media, coordinates, and keyboard input in TXL."><meta name="twitter:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"TXL Windows, Images and Video","description":"Configure TXL window title, icon, size and mode; size images, play local or remote videos, set Canvas positions, and handle Enter key events.","url":"https://txl.wuaze.com/docs/windows-and-media.html","mainEntityOfPage":"https://txl.wuaze.com/docs/windows-and-media.html","inLanguage":"en","author":{"@type":"Organization","name":"TXL / Timexo","url":"https://txl.wuaze.com/"},"publisher":{"@type":"Organization","name":"TXL / Timexo","url":"https://txl.wuaze.com/"}}</script>
+</head><body><header class="site-header"><div class="wrap nav-row"><a class="brand" href="/" aria-label="TXL home"><img src="/assets/txl-logo.png" alt="" width="37" height="37"><span>TXL<small>Timexo Language</small></span></a><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="primary-nav">Menu</button><nav class="nav-links" id="primary-nav" data-nav aria-label="Primary navigation"><a href="/docs/" aria-current="page">Language</a><a href="/features.html">What it does</a><a href="/getting-started.html">Get started</a><a href="/blogs/">Journal</a><a class="nav-cta" href="https://github.com/realTimexo/TXL-framework">View source</a></nav></div></header>
+<main class="wrap"><section class="page-hero"><div class="eyebrow">Language guide / Desktop runtime</div><h1>Windows, media, and keys.</h1><p>These features connect TXL source to native WPF window and media controls. Paths and values are checked before the generated application runs.</p></section><div class="content-layout"><nav class="toc" aria-label="On this page"><a href="#windows">Windows block</a><a href="#images">Image sources</a><a href="#video">Video playback</a><a href="#position">Positioning</a><a href="#keyboard">Keyboard</a></nav><article class="prose">
+<h2 id="windows">Set the window</h2><p>Put a `windows (` block in the app source. The title and icon are project-relative values. Size uses width first, height second; the parser accepts 200–7680 by 150–4320. Mode choices are `normal`, `maximized`, `fullscreen`, and `borderless`.</p><pre>windows (
+  title: TXL Photo Viewer
+  icon: assets/app.ico
+  size: 1100x760
+  mode: maximized
+)</pre><p>Omit a setting to inherit its `info.json` default: app name or optional window title, project icon, project width and height, and optional project mode. `normal` is the default mode.</p>
+<h2 id="images">Size images and pick a source</h2><p>Local images use project-relative paths such as `assets/logo.png`. The compiler copies project content beside the executable. Absolute and parent-traversal paths are not accepted by the generated runtime. A URL must start with HTTP or HTTPS.</p><pre>style (
+  mark:
+    size = 128
+)
+image(mark) = assets/logo.png
+image = https://example.org/banner.png</pre><p>Image `size` sets a uniform-fit box; `width` or `height` sets one side independently. The pixels keep their proportions. Remote files require an internet connection at runtime.</p>
+<h2 id="video">Play a local or remote video</h2><p>The `video` element uses a WPF `MediaElement` and adds Play/Pause controls. Its source may be a local project asset or an HTTP(S) address. Use `autoplay = false` to wait for the Play button; `loop = true` repeats the clip.</p><pre>video = assets/sample.mp4
+autoplay = false
+loop = true
+width = 480
+height = 270</pre><div class="callout warning">WPF media support depends on installed Windows codecs and the exact file or stream format. Remote playback and codec behavior have not been visually verified on every Windows release; test the target device.</div>
+<h2 id="position">Place controls at fixed coordinates</h2><p>Choose `layout = absolute` for the containing group, then assign fixed coordinates with `position = x18 y3`. Position can be set directly on the group or an element, or inherited from a style section. Responsive resizing rules are not part of the current layout system.</p><pre>group = canvas (
+  layout = absolute
+  text = Positioned label
+  position = x18 y3
+  button = Continue
+  position = x18 y48
+)</pre>
+<h2 id="keyboard">Handle an Enter key without eating input</h2><p>Attach a `keydown` class action to an input. A `key` property filters which key runs the action. Since the handler runs on a focused control, ordinary typing continues to edit the text.</p><pre>actions (
+  searchField(keydown):
+    key = Enter
+    alert = Search submitted
+)
+input(searchField) = Type a query, then press Enter</pre><p>This simple event form does not implement multi-key chords or a global shortcut manager. Read <a href="/docs/variables.html">variables and native alert boxes</a> for the alert action itself.</p><div class="page-end">The complete project examples are in <a href="https://github.com/realTimexo/TXL-framework/tree/main/Examples/AllFeatures">AllFeatures</a>.</div>
+</article></div></main><footer class="site-footer"><div class="wrap footer-row"><div>TXL · Timexo Language · © <span data-current-year>2026</span></div><nav class="footer-links" aria-label="Footer"><a href="/docs/">Docs</a><a href="/downloads.html">Releases</a><a href="/changelog.html">Changelog</a><a href="/contributing.html">Contribute</a><a href="/blogs/">Journal</a></nav></div></footer></body></html>

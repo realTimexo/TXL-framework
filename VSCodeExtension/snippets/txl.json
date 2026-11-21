@@ -9,14 +9,69 @@
     "body": ["button = ${1:Label}"],
     "description": "Create a native TXL button"
   },
+  "headline": {
+    "prefix": "headline",
+    "body": ["text.headline = ${1:Headline}"],
+    "description": "Add a large text.headline label"
+  },
+  "video": {
+    "prefix": "video",
+    "body": ["video = ${1:assets/video.mp4}", "autoplay = ${2:true}", "loop = ${3:false}"],
+    "description": "Play a local video or HTTP(S) URL"
+  },
   "style": {
     "prefix": "style",
-    "body": ["style (", "  main:", "    font = Arial", "    background = #20202A", "    color = #F4F7FB", ")"],
-    "description": "Create a TXL style block"
+    "body": [
+      "style (",
+      "  main:",
+      "    font = ${1:Arial}",
+      "    background = ${2:#20202A}",
+      "    color = ${3:#F4F7FB}",
+      "  button:",
+      "    size = ${4:16}",
+      "    padding = ${5:8}",
+      ")"
+    ],
+    "description": "Create style sections with editable name = value properties"
+  },
+  "style size": {
+    "prefix": "style-size",
+    "body": ["size = ${1:16}"],
+    "description": "Set a text or image size in a style section"
+  },
+  "position": {
+    "prefix": "position",
+    "body": ["position = x${1:18} y${2:3}"],
+    "description": "Place an element inside an absolute Canvas"
+  },
+  "windows": {
+    "prefix": "windows",
+    "body": [
+      "windows (",
+      "  title: ${1:My TXL app}",
+      "  icon: ${2:assets/app.ico}",
+      "  size: ${3:1100x760}",
+      "  mode: ${4|normal,maximized,fullscreen,borderless|}",
+      ")"
+    ],
+    "description": "Set project window title, icon, size, and mode"
+  },
+  "actions": {
+    "prefix": "actions",
+    "body": [
+      "actions (",
+      "  ${1:submit}(click):",
+      "    alert = ${2:Hello from TXL}",
+      "  ${3:submit}(keydown):",
+      "    key = Enter",
+      "    alert = ${4:Enter was pressed}",
+      ")"
+    ],
+    "description": "Define click, hover, and keyboard actions by class"
   },
   "text": {
     "prefix": "text",
-    "body": ["text = "],
+    "body": ["text = ${1:Label}"],
     "description": "Add a TXL text label"
   }
 }

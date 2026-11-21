@@ -4,6 +4,13 @@
 # Gradient backgrounds, shadows, border/radius, theme switching, loading overlays,
 # custom modal forms, live editor inspection, and hot reload are not implemented yet.
 
+windows (
+  title: TXL All Features
+  icon: assets/app.ico
+  size: 1150x820
+  mode: normal
+)
+
 style (
   main:
     font = Segoe UI
@@ -53,6 +60,8 @@ style (
     background = #0F766E
     color = #FFFFFF
     padding = 10
+  brandImage:
+    size = 160
 )
 
 # Reusable parameterized component; values are substituted at compile time.
@@ -73,6 +82,9 @@ actions (
   classAction(hover):
     size = 19
     color = #A7F3D0
+  keyboardField(keydown):
+    key = Enter
+    alert = Enter key detected on the focused input.
 )
 
 # Runtime state declarations seed persistent values on the first launch.
@@ -84,7 +96,8 @@ state = note:
 # Header, styles, and reusable components.
 group = header (
   layout = vertical
-  text(hl) = TXL All Features
+  image(brandImage) = assets/txl-logo.png
+  text.headline = TXL All Features
   text = One example file for the current language and runtime features.
   metricCard(title: Runtime state, value: Saved locally)
   metricCard(title: Templates, value: Components)
@@ -93,7 +106,7 @@ group = header (
 # Basic vertical/horizontal groups, styled controls, and the new class event syntax.
 group = section (
   layout = vertical
-  text(hl) = 1. Controls, placeholder inputs, and class actions
+  text.headline = 1. Controls, placeholder inputs, and class actions
   text = The hint disappears as soon as you type. This second field starts with actual text.
   input = Type a name here
   bind = personName
@@ -108,7 +121,7 @@ group = section (
 # Runtime string/boolean state with set, append, clear, and toggle actions.
 group = section (
   layout = vertical
-  text(hl) = 2. Persistent runtime state
+  text.headline = 2. Persistent runtime state
   text = Counter value:
   text(accent) = 0
   bind = counter
@@ -147,7 +160,7 @@ state = calculationResult:Enter two numbers
 
 group = section (
   layout = vertical
-  text(hl) = 3. Calculator and arithmetic actions
+  text.headline = 3. Calculator and arithmetic actions
   input = First number
   bind = left
   input = Second number
@@ -172,7 +185,7 @@ state = newTask:
 state = tasks:[]
 group = section (
   layout = vertical
-  text(hl) = 4. Persistent todo list
+  text.headline = 4. Persistent todo list
   input = Add a task to the list
   bind = newTask
   button = Add task
@@ -184,7 +197,7 @@ group = section (
 set = users:[Ada,Lin,Sam]
 group = section (
   layout = vertical
-  text(hl) = 5. Compile-time list and for loop
+  text.headline = 5. Compile-time list and for loop
   text = These rows are generated during compilation, not as a reactive list.
   for = user in users (
     metricCard(title: Example user, value: ${user})
@@ -194,15 +207,31 @@ group = section (
 # Fixed x/y coordinates inside an absolute Canvas layout.
 group = section (
   layout = absolute
+  position = x10 y8
   text(accent) = 6. Absolute x/y positioning
-  x = 10
-  y = 8
   text = This label is placed at x=18, y=56 in its Canvas.
-  x = 18
-  y = 56
+  position = x18 y56
   button = Fixed-position button
-  x = 18
-  y = 94
+  position = x18 y94
+)
+
+# A local H.264 clip with native play/pause controls. Replace it with a local MP4 or HTTP(S) URL.
+group = section (
+  layout = vertical
+  text.headline = 7. Video playback
+  text = This bundled five-second MP4 is a compact playback example. Supported formats depend on Windows codecs.
+  video = assets/sample.mp4
+  autoplay = false
+  loop = true
+  width = 480
+  height = 270
+)
+
+# Enter in this input triggers the class keyboard action; ordinary typing remains in the input.
+group = section (
+  layout = vertical
+  text.headline = 8. Keyboard input
+  input(keyboardField) = Press Enter here
 )
 
 # Previous compile-time constructs remain available alongside runtime state.

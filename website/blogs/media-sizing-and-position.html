@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Images, Video and Positioning in TXL</title>
+<meta name="description" content="Size TXL images, load local or HTTP(S) media, add WPF video playback, and set fixed absolute coordinates in a native Windows app.">
+<meta name="keywords" content="TXL image dimensions, TXL video playback, TXL position, WPF media, TXL local assets">
+<meta name="robots" content="index,follow"><link rel="canonical" href="https://txl.wuaze.com/blogs/media-sizing-and-position.html">
+<link rel="icon" type="image/png" href="/assets/txl-logo.png"><link rel="stylesheet" href="/assets/site.css"><script defer src="/assets/site.js"></script>
+<meta property="og:type" content="article"><meta property="og:title" content="Images, Video and Positioning in TXL"><meta property="og:description" content="Use project images and videos, size visuals, and place controls on a fixed Canvas in TXL."><meta property="og:url" content="https://txl.wuaze.com/blogs/media-sizing-and-position.html"><meta property="og:site_name" content="TXL"><meta property="og:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="TXL: a small language for building native Windows apps."><meta property="og:image:type" content="image/png">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Images, Video and Positioning in TXL"><meta name="twitter:description" content="Image sizing, WPF video, and fixed-coordinate layout in a TXL project."><meta name="twitter:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Images, Video and Positioning in TXL","description":"Use image and video assets, size visuals, and place controls on a fixed Canvas in TXL.","datePublished":"2026-11-21","dateModified":"2026-11-21","author":{"@type":"Organization","name":"TXL"},"publisher":{"@type":"Organization","name":"TXL","url":"https://txl.wuaze.com/"},"mainEntityOfPage":"https://txl.wuaze.com/blogs/media-sizing-and-position.html"}</script>
+</head><body><header class="site-header"><div class="wrap nav-row"><a class="brand" href="/" aria-label="TXL home"><img src="/assets/txl-logo.png" alt="" width="37" height="37"><span>TXL<small>Timexo Language</small></span></a><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="primary-nav">Menu</button><nav class="nav-links" id="primary-nav" data-nav aria-label="Primary navigation"><a href="/docs/">Language</a><a href="/features.html">What it does</a><a href="/getting-started.html">Get started</a><a href="/blogs/" aria-current="page">Journal</a><a class="nav-cta" href="https://github.com/realTimexo/TXL-framework">View source</a></nav></div></header>
+<main class="wrap"><section class="page-hero"><div class="eyebrow">Assets and layout / 5 minute read</div><h1>Images, video, and fixed coordinates.</h1><p>A desktop project can use local assets for reliable offline distribution, or an HTTP(S) source when a network dependency is appropriate. The layout and media model is intentionally simple.</p></section><div class="content-layout"><nav class="toc" aria-label="Article contents"><a href="#image">Image sizing</a><a href="#paths">Project assets</a><a href="#video">Video controls</a><a href="#position">Coordinates</a></nav><article class="prose"><p class="article-meta"><span class="article-tag">Assets and layout</span><time datetime="2026-11-21">21 November 2026</time></p>
+<h2 id="image">Fit an image into a smaller box</h2><p>Assign a class in a `style (` block and set `size`, `width`, or `height`. An image's proportions remain intact when the runtime fits it into the requested dimensions.</p><pre>style (
+  logoMark:
+    size = 112
+)
+image(logoMark) = assets/txl-logo.png</pre><p>`size` sets a uniform-fit box. A width or height sets that side; leave the other side unconstrained to preserve the image's natural ratio.</p>
+<h2 id="paths">Keep project files together</h2><p>Put files beneath the project folder and reference them with relative paths. On publish, TXL places project content beside the executable in its `content` folder. Ship that folder along with the EXE. Absolute paths and paths escaping the project root are rejected to keep output predictable.</p><pre>MyApp/
+  info.json
+  main.txl
+  assets/
+    txl-logo.png
+    sample.mp4</pre><p>HTTP and HTTPS URLs are supported, but remote assets depend on a network connection and the remote host staying available. Local project files are usually the better choice for offline apps.</p>
+<h2 id="video">Use the video player controls</h2><p>The `video` element generates a WPF media control with Play and Pause buttons. `autoplay = false` disables automatic start; `loop = true` repeats playback. Provide dimensions to fit it into a known space.</p><pre>video = assets/sample.mp4
+autoplay = false
+loop = true
+width = 480
+height = 270</pre><p>Video support is platform-dependent. WPF uses Windows media components and installed codecs; a file that plays in one environment may not play on another. Test the target PCs and codecs. The current implementation has not received visual playback verification across Windows versions.</p>
+<h2 id="position">Place elements with `x` and `y`</h2><p>For precise fixed positioning, set `layout = absolute` on the containing group. Then use `position = x18 y3` on each control or its style. Coordinates are fixed canvas offsets, not responsive constraints.</p><pre>group = toolbar (
+  layout = absolute
+  text = Search
+  position = x18 y3
+  button = Go
+  position = x18 y48
+)</pre><p>Use vertical or horizontal stack layout when you want children arranged in sequence. Use absolute positioning when you want explicit coordinate placement.</p><div class="callout warning">For WPF media, focus and scaling, validate a real Windows build. The cross-platform compiler tests do not simulate a desktop or video codec.</div><p>Read the full <a href="/docs/windows-and-media.html">window, image, video, and keyboard reference</a>, or see the <a href="https://github.com/realTimexo/TXL-framework/tree/main/Examples/AllFeatures">AllFeatures sample</a>.</p><div class="page-end">Back to <a href="/blogs/">all TXL journal articles</a>.</div></article></div></main><footer class="site-footer"><div class="wrap footer-row"><div>TXL · Timexo Language · © <span data-current-year>2026</span></div><nav class="footer-links" aria-label="Footer"><a href="/docs/">Docs</a><a href="/downloads.html">Releases</a><a href="/changelog.html">Changelog</a><a href="/contributing.html">Contribute</a><a href="https://github.com/realTimexo/TXL-framework">GitHub</a></nav></div></footer></body></html>

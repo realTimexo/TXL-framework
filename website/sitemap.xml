@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://txl.wuaze.com/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://txl.wuaze.com/getting-started.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://txl.wuaze.com/features.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://txl.wuaze.com/downloads.html</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://txl.wuaze.com/changelog.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://txl.wuaze.com/contributing.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://txl.wuaze.com/docs/</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://txl.wuaze.com/docs/variables.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://txl.wuaze.com/docs/windows-and-media.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/variables-and-conditions.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/native-alerts-and-keyboard.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/media-sizing-and-position.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+</urlset>
