@@ -9,8 +9,13 @@
   <url><loc>https://txl.wuaze.com/docs/</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <url><loc>https://txl.wuaze.com/docs/variables.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://txl.wuaze.com/docs/windows-and-media.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://txl.wuaze.com/blogs/</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://txl.wuaze.com/blogs/variables-and-conditions.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://txl.wuaze.com/blogs/native-alerts-and-keyboard.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://txl.wuaze.com/blogs/media-sizing-and-position.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/calculator-txl-guide.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/todo-txl-guide.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/install-txl-guide.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/wpf-txl-guide.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://txl.wuaze.com/blogs/project-txl-guide.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
 </urlset>

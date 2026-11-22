@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build a Windows Calculator with TXL | Tutorial</title>
+<meta name="description" content="Build a small Windows calculator with TXL. Learn state bindings, math actions, input validation, and how to check and build the example app.">
+<meta name="keywords" content="TXL calculator tutorial, Windows calculator with TXL, TXL math action, TXL state binding, TXL app example">
+<meta name="robots" content="index,follow"><link rel="canonical" href="https://txl.wuaze.com/blogs/calculator-txl-guide.html">
+<link rel="icon" type="image/png" href="/assets/txl-logo.png"><link rel="stylesheet" href="/assets/site.css"><script defer src="/assets/site.js"></script>
+<meta property="og:type" content="article"><meta property="og:title" content="Build a Windows Calculator with TXL"><meta property="og:description" content="A practical walkthrough of state bindings and math actions in a small native Windows calculator."><meta property="og:url" content="https://txl.wuaze.com/blogs/calculator-txl-guide.html"><meta property="og:site_name" content="TXL"><meta property="og:image" content="https://txl.wuaze.com/assets/txl-social-card.png"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="TXL, a small language for building native Windows desktop apps.">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Build a Windows Calculator with TXL"><meta name="twitter:description" content="A practical walkthrough of state bindings and math actions in a small native Windows calculator."><meta name="twitter:image" content="https://txl.wuaze.com/assets/txl-social-card.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Build a Windows Calculator with TXL","description":"A practical walkthrough of state bindings and math actions in a small native Windows calculator.","datePublished":"2026-11-22","dateModified":"2026-11-22","inLanguage":"en","author":{"@type":"Organization","name":"TXL Project"},"publisher":{"@type":"Organization","name":"TXL / Timexo","url":"https://txl.wuaze.com/"},"mainEntityOfPage":"https://txl.wuaze.com/blogs/calculator-txl-guide.html","image":"https://txl.wuaze.com/assets/txl-social-card.png"}</script>
+</head><body><header class="site-header"><div class="wrap nav-row"><a class="brand" href="/" aria-label="TXL home"><img src="/assets/txl-logo.png" alt="" width="37" height="37"><span>TXL<small>Timexo Language</small></span></a><button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="primary-nav">Menu</button><nav class="nav-links" id="primary-nav" data-nav aria-label="Primary navigation"><a href="/docs/">Language</a><a href="/features.html">What it does</a><a href="/getting-started.html">Get started</a><a href="/blogs/" aria-current="page">Journal</a><a class="nav-cta" href="https://github.com/realTimexo/TXL-framework">View source</a></nav></div></header>
+<main class="wrap"><section class="page-hero"><div class="eyebrow">Build along / 7 minute guide</div><h1>Build a Windows calculator with TXL.</h1><p>Follow the real TXL calculator example from two number inputs to four arithmetic buttons. The key idea is how runtime state connects input, result display, and math actions.</p></section><div class="content-layout"><nav class="toc" aria-label="Article contents"><a href="#project">The project</a><a href="#state">Connect state</a><a href="#actions">Add operations</a><a href="#test">Check and test</a><a href="#limits">Scope</a></nav><article class="prose"><p class="article-meta"><span class="article-tag">TXL tutorial</span><time datetime="2026-11-22">22 November 2026</time></p>
+<p>This is a small four-operation calculator, not a scientific calculator. It is useful for learning how TXL's persisted values and actions fit together in a native Windows app. You can inspect the complete <a href="https://github.com/realTimexo/TXL-framework/tree/main/Examples/Calculator">Calculator project source</a> as you read.</p>
+<h2 id="project">Start with the project structure</h2><p>A TXL project includes <code>info.json</code> and a starting source file such as <code>main.txl</code>. Install TXL using the <a href="/getting-started.html">Windows quick start</a>, change to the project folder, and run <code>txl --check</code> before you build.</p>
+<p>The calculator uses three state keys: <code>left</code> and <code>right</code> hold the entered operands; <code>result</code> stores the displayed answer. Each key is declared before the interface:</p><pre>state = left:0
+state = right:0
+state = result:0</pre>
+<h2 id="state">Bind inputs and the result label</h2><p>An input's text is a placeholder, and <code>bind</code> connects that control to the next state key. The output label binds to the result key too, so a calculation action can update the value the app displays.</p><pre>group = calculator (
+  layout = vertical
+  text.headline = Simple Calculator
+  text = Enter two numbers, then choose an operation.
+
+  input = First number
+  bind = left
+  input = Second number
+  bind = right
+
+  text = Result
+  text(result) = 0
+  bind = result
+)</pre><p>The <code>vertical</code> layout stacks the controls. Add a style block to set fonts, colors, spacing, and input width. Styling is optional; it does not change how the state keys work.</p>
+<h2 id="actions">Attach the four arithmetic actions</h2><p>Each button is followed by an action. The <code>math</code> operation names the calculation first, then the two input state keys, and finally the destination key. Keep that order consistent:</p><pre>group = operations (
+  layout = horizontal
+  button = Add
+  action = math(add,left,right,result)
+  button = Subtract
+  action = math(subtract,left,right,result)
+  button = Multiply
+  action = math(multiply,left,right,result)
+  button = Divide
+  action = math(divide,left,right,result)
+)</pre><p>The complete example also adds a clear button using <code>action = clear(result)</code>. You can put the operations group inside the main calculator group so the buttons sit side by side. See the <a href="/blogs/variables-and-conditions.html">guide to TXL values and persistent state</a> if bindings are new to you.</p>
+<h2 id="test">Check and build on Windows</h2><ol><li>Run <code>txl --check</code> from the project folder. Fix the first reported error and check again.</li><li>On Windows, run <code>txl --preview</code> to open the native WPF window while you test.</li><li>Enter ordinary values and test Add, Subtract, Multiply, and Divide separately. Also try a negative value, a decimal, non-numeric input, and division by zero.</li><li>When the interface behaves as expected, run <code>txl --build</code>. The app is written under <code>dist</code>.</li></ol><p>The supplied sample is documented to show a readable result for non-numeric input or division by zero. This article does not promise a specific message wording or number-rounding policy.</p>
+<h2 id="limits">Know what this example does not do</h2><p>The project demonstrates simple arithmetic actions and persisted text state. It does not implement expression parsing, operator precedence, a calculation history, memory keys, or a scientific keypad. TXL targets native Windows WPF apps; Linux can check syntax and cross-publish, but it cannot run or visually verify the WPF interface. Read the <a href="/docs/">TXL language reference</a> for the supported syntax and current limits.</p>
+<p>Microsoft's <a href="https://learn.microsoft.com/en-us/dotnet/core/deploying/">self-contained deployment guidance</a> explains that a self-contained .NET publish includes the runtime for its target platform. TXL builds a Windows x64 app; keep the full output folder when distributing assets rather than treating every deployment as one portable EXE.</p>
+<h2>Sources and next steps</h2><ul><li><a href="https://learn.microsoft.com/en-us/dotnet/core/deploying/">Microsoft: .NET application publishing overview</a></li><li><a href="https://developers.google.com/search/docs/fundamentals/creating-helpful-content">Google Search Central: Helpful, reliable, people-first content</a></li><li><a href="https://github.com/realTimexo/TXL-framework/tree/main/Examples/Calculator">TXL Calculator sample source</a></li></ul><div class="page-end">Continue with <a href="/blogs/todo-txl-guide.html">a persistent todo-list tutorial</a>, or browse <a href="/blogs/">all TXL journal guides</a>.</div></article></div></main><footer class="site-footer"><div class="wrap footer-row"><div>TXL · Timexo Language · © <span data-current-year>2026</span></div><nav class="footer-links" aria-label="Footer"><a href="/docs/">Docs</a><a href="/downloads.html">Releases</a><a href="/changelog.html">Changelog</a><a href="/contributing.html">Contribute</a><a href="/blogs/">Journal</a><a href="https://github.com/realTimexo/TXL-framework">GitHub</a></nav></div></footer></body></html>
