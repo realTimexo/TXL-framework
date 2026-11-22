@@ -32,6 +32,8 @@ txl --check
 txl --build
 ```
 
+If you already have TXL v0.6.0 or earlier, rerun the installer command above once: older CLI versions do not recognize `txl --update`. After that one-time update to v0.7.0, use `txl --update` for later releases.
+
 Pass a project path when you are elsewhere: `txl --build C:\Projects\MyApp`. The app is written to `dist\<AppName>\<AppName>.exe`. If the app uses images or videos, distribute that entire output folder, including `content`. The compiler needs the .NET 9 SDK to build; the generated app is self-contained and does not need TXL installed on the target PC.
 
 The installer downloads the latest compiler package from [GitHub Releases](https://github.com/realTimexo/TXL-framework/releases). The CLI and installer require a published release package; see [Releases and versioning](#releases-and-versioning) for the release process.

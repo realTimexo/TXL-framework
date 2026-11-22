@@ -14,9 +14,13 @@ Notable changes to TXL are recorded here. Versions follow semantic versioning wh
 - The starter scaffold, AllFeatures sample, VS Code completions/snippets, grammar reference, and website examples now use singular `window (`.
 - The installer pins the exact version from the latest stable release when installing or updating the CLI and documents `txl --update` for later updates.
 
+### Upgrade note
+
+- CLI versions before v0.7.0 do not include the updater command. Users on v0.6.0 or earlier should rerun the installer once to bootstrap v0.7.0; subsequent updates can use `txl --update`.
+
 ### Validation
 
-- The compiler solution builds on .NET SDK 9.0.200; 30 regression tests pass, including singular syntax and legacy plural compatibility. AllFeatures passes `txl --check`, and the `--update` command smoke test correctly refuses to downgrade a v0.7.0 build to the then-published v0.6.0 release.
+- The compiler solution builds on .NET SDK 9.0.200; all 30 regression tests pass, including singular syntax and legacy plural compatibility. AllFeatures passes `txl --check`. The published v0.7.0 tool recognizes `txl --update` and reports the release as current; the pre-release no-downgrade check also passed.
 - Generated WPF applications require Windows for visual, keyboard, icon, and codec verification.
 
 ## [0.6.0] — 2026-11-21

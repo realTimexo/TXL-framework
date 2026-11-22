@@ -38,7 +38,7 @@ txl --build 'C:\Projects\MyTXLApp'
 
 The executable is written under `MyTXLApp\dist\<safe-app-name>\<safe-app-name>.exe`. When your app uses images, videos, or other content files, distribute the entire folder, including its `content` subfolder. The EXE itself is self-contained, but local media assets are copied alongside it.
 
-Run `txl --update` from any folder to check the latest stable GitHub release and update the installed global CLI. The updater downloads the release package, verifies the GitHub asset size and SHA-256 digest, and invokes `dotnet tool update`; internet access and an existing global TXL installation are required. The installer above remains available for a fresh install.
+Run `txl --update` from any folder to check the latest stable GitHub release and update the installed global CLI. The updater downloads the release package, verifies the GitHub asset size and SHA-256 digest, and invokes `dotnet tool update`; internet access and an existing global TXL installation are required. If you have v0.6.0 or earlier, rerun the installer above once first—those older CLI builds do not recognize the new update command. The installer updates an existing tool as well as installing a fresh one; once on v0.7.0 or later, `txl --update` is the normal update path.
 
 The `txl` command also accepts `--help`, `--version`, `--update`, `--check`, `--preview`, `--build`, `check`, `preview`, `build`, and `run`. `preview` opens the native WPF window on Windows without producing the standalone EXE. It is a launched native window, not an embedded VS Code preview. `check` validates `info.json` and TXL source without publishing.
 
