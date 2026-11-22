@@ -4,6 +4,7 @@ using Txl;
 
 var command = args.FirstOrDefault()?.ToLowerInvariant() ?? "--help";
 if (command is "help" or "--help" or "-h") { Help(); return 0; }
+if (command is "update" or "--update") return await CliUpdater.RunAsync();
 if (command is "version" or "--version" or "-v")
 {
     var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.0";
@@ -32,7 +33,7 @@ var parsed = Parser.Parse(File.ReadAllText(source), source);
 if (!PrintDiagnostics(parsed.Diagnostics, project)) return 1;
 if (WindowCatalog.Settings.TryGetValue("icon", out var windowIcon) && !File.Exists(Path.Combine(project, windowIcon)))
 {
-    PrintDiagnostics(new List<Diagnostic> { new(source, 1, 1, Severity.Error, $"Window icon '{windowIcon}' does not exist. Add the icon file under the project folder or change the path in the windows block.") }, project);
+    PrintDiagnostics(new List<Diagnostic> { new(source, 1, 1, Severity.Error, $"Window icon '{windowIcon}' does not exist. Add the icon file under the project folder or change the path in the window block.") }, project);
     return 1;
 }
 if (command == "check")
@@ -145,7 +146,7 @@ static bool PrintDiagnostics(IEnumerable<Diagnostic> diagnostics, string project
         {
             var message when message.Contains("Unknown command", StringComparison.OrdinalIgnoreCase) => "Check spelling; available elements include text, button, image, video, input, checkbox, list, line, and space.",
             var message when message.Contains("Cannot parse TXL statement", StringComparison.OrdinalIgnoreCase) => "TXL uses one statement per line. Elements use 'text = Hello'; blocks use 'group = name (' and close with ')'.",
-            var message when message.Contains("Missing closing", StringComparison.OrdinalIgnoreCase) => "Add a standalone ')' to close the open block. Each style, actions, windows, and group block needs its own closer.",
+            var message when message.Contains("Missing closing", StringComparison.OrdinalIgnoreCase) => "Add a standalone ')' to close the open block. Each style, actions, window, and group block needs its own closer.",
             var message when message.Contains("escapes project root", StringComparison.OrdinalIgnoreCase) => "Use an asset path relative to the project, such as assets/photo.png; do not use '..' to leave the project folder.",
             var message when message.Contains("info.json", StringComparison.OrdinalIgnoreCase) => "Check the project folder for info.json and verify its required fields and JSON syntax.",
             _ => null
@@ -158,5 +159,5 @@ static bool PrintDiagnostics(IEnumerable<Diagnostic> diagnostics, string project
 
 static void Help()
 {
-    Console.WriteLine("TXL — Timexo Language\nUsage: txl <command> [project]\n\nCommands (project defaults to the current folder):\n  txl --build [project]    Build a self-contained Windows x64 app\n  txl --check [project]    Check project metadata and TXL syntax\n  txl --preview [project] Run a native WPF preview (Windows only)\n  txl --version            Print installed compiler version\n  txl --help               Show this help\n\nAliases: txl build|check|preview|run [project]\n\nRequirements: .NET 9 SDK for building; Windows is required to run or visually test WPF apps.");
+    Console.WriteLine("TXL — Timexo Language\nUsage: txl <command> [project]\n\nCommands (project defaults to the current folder):\n  txl --build [project]    Build a self-contained Windows x64 app\n  txl --check [project]    Check project metadata and TXL syntax\n  txl --preview [project]  Run a native WPF preview (Windows only)\n  txl --update             Install the latest published TXL CLI release\n  txl --version            Print installed compiler version\n  txl --help               Show this help\n\nAliases: txl build|check|preview|run|update [project]\n\nRequirements: .NET 9 SDK for building; internet access is required for --update; Windows is required to run or visually test WPF apps.");
 }

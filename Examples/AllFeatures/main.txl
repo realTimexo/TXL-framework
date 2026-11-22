@@ -4,7 +4,7 @@
 # Gradient backgrounds, shadows, border/radius, theme switching, loading overlays,
 # custom modal forms, live editor inspection, and hot reload are not implemented yet.
 
-windows (
+window (
   title: TXL All Features
   icon: assets/app.ico
   size: 1150x820

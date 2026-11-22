@@ -3,7 +3,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 const starter = [
-  'windows (',
+  'window (',
   '  title: ${1:My TXL app}',
   '  size: ${2:1100x760}',
   '  mode: ${3:normal}',
@@ -166,7 +166,7 @@ function activate(context) {
       const beforeCursor = line.slice(0, position.character);
       if (beforeCursor.trim() === '!') {
         const item = new vscode.CompletionItem('TXL application starter', vscode.CompletionItemKind.Snippet);
-        item.detail = 'Insert windows, styles, actions, and a starter app'; item.filterText = '!'; item.sortText = '0_starter';
+        item.detail = 'Insert window, styles, actions, and a starter app'; item.filterText = '!'; item.sortText = '0_starter';
         item.range = new vscode.Range(position.line, Math.max(0, position.character - 1), position.line, position.character);
         item.insertText = new vscode.SnippetString(starter);
         return [item];
@@ -199,8 +199,8 @@ function activate(context) {
         });
       }
 
-      const inWindows = isInsideBlock(document, position.line, 'windows');
-      if (inWindows) {
+      const inWindow = isInsideBlock(document, position.line, 'window') || isInsideBlock(document, position.line, 'windows');
+      if (inWindow) {
         const range = document.getWordRangeAtPosition(position);
         const prefix = range ? document.getText(range).toLowerCase() : '';
         return makeItems(windowProperties.filter(([label]) => !prefix || label.toLowerCase().startsWith(prefix)), range);

@@ -2,6 +2,23 @@
 
 Notable changes to TXL are recorded here. Versions follow semantic versioning where practical. The release page contains distributable packages and release-specific installation links.
 
+## [0.7.0] — 2026-11-22
+
+### Added
+
+- `window (` is the canonical spelling for application window settings. Existing `windows (` source remains accepted as a compatibility alias.
+- `txl --update` and `txl update` check the latest stable GitHub Release, download its `Txl.Cli` package, verify the published size and SHA-256 digest, and update the installed per-user global tool.
+
+### Changed
+
+- The starter scaffold, AllFeatures sample, VS Code completions/snippets, grammar reference, and website examples now use singular `window (`.
+- The installer pins the exact version from the latest stable release when installing or updating the CLI and documents `txl --update` for later updates.
+
+### Validation
+
+- The compiler solution builds on .NET SDK 9.0.200; 30 regression tests pass, including singular syntax and legacy plural compatibility. AllFeatures passes `txl --check`, and the `--update` command smoke test correctly refuses to downgrade a v0.7.0 build to the then-published v0.6.0 release.
+- Generated WPF applications require Windows for visual, keyboard, icon, and codec verification.
+
 ## [0.6.0] — 2026-11-21
 
 ### Added

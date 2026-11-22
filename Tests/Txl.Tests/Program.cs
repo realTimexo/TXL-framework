@@ -47,7 +47,7 @@ Test("runtime state persists and math handles invalid input and divide by zero",
 });
 Test("persistent state uses project identity instead of an overridden window title", () =>
 {
-    var parsed = Parser.Parse("windows (\ntitle: Custom Display Title\n)\nstate = visits:0");
+    var parsed = Parser.Parse("window (\ntitle: Custom Display Title\n)\nstate = visits:0");
     if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
     var output = WpfEmitter.Emit(new ProjectInfo("Stable Project Name", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
     if (!output.Contains("Custom Display Title") || !output.Contains("appName=m.GetProperty(\"Name\").GetString()??\"TXL\"") || !output.Contains("string.Concat(appName.Select") || output.Contains("string.Concat(Title!.Select")) throw new Exception("window title changed the persistent state folder");
@@ -156,19 +156,24 @@ Test("dotted text.headline syntax maps to large text", () =>
     var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
     if (!emitted.Contains("variant is") || !emitted.Contains("headline") || !emitted.Contains("?30:16")) throw new Exception("headline default size was not emitted");
 });
-Test("windows block overrides title icon size and mode", () =>
+Test("window block overrides title icon size and mode", () =>
 {
-    var parsed = Parser.Parse("windows (\ntitle: A TXL window\nicon: assets/app.ico\nsize: 1200x800\nmode: fullscreen\n)\ntext = Hello");
+    var parsed = Parser.Parse("window (\ntitle: A TXL window\nicon: assets/app.ico\nsize: 1200x800\nmode: fullscreen\n)\ntext = Hello");
     if (parsed.Program is null || WindowCatalog.Settings["size"] != "1200x800") throw new Exception(string.Join(";", parsed.Diagnostics));
     var emitted = WpfEmitter.Emit(new ProjectInfo("Default", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo(900, 600)), parsed.Program, ".");
     if (!emitted.Contains("WindowStyle.None") || !emitted.Contains("WindowState=WindowState.Maximized") || !emitted.Contains("ResolveContentPath(icon)")) throw new Exception("fullscreen, icon, or title metadata runtime missing");
     if (!WpfEmitter.ProjectFile(new ProjectInfo("Default", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo())).Contains("content/assets/app.ico")) throw new Exception("windows icon was not packaged as app icon");
 });
-Test("windows block rejects invalid mode and size", () =>
+Test("window block rejects invalid mode and size", () =>
 {
-    var badMode = Parser.Parse("windows (\nmode: tiny\n)\ntext = x");
-    var badSize = Parser.Parse("windows (\nsize: 100x100\n)\ntext = x");
+    var badMode = Parser.Parse("window (\nmode: tiny\n)\ntext = x");
+    var badSize = Parser.Parse("window (\nsize: 100x100\n)\ntext = x");
     if (!badMode.Diagnostics.Any(d => d.Message.Contains("Window mode must")) || !badSize.Diagnostics.Any(d => d.Message.Contains("Window size must"))) throw new Exception("invalid window setting accepted");
+});
+Test("legacy plural windows block remains accepted", () =>
+{
+    var parsed = Parser.Parse("windows (\ntitle: Older project\n)\ntext = Compatible");
+    if (parsed.Program is null || WindowCatalog.Settings.GetValueOrDefault("title") != "Older project") throw new Exception(string.Join(";", parsed.Diagnostics));
 });
 Test("image style size applies dimensions and URL is kept as a safe media URI", () =>
 {

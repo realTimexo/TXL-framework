@@ -42,7 +42,7 @@
       }
     },
     "blockHeader": {
-      "match": "^\\s*(style|actions|windows|if|repeat|component|for)\\b(?:\\s*=\\s*([^\\(]+))?\\s*(\\()",
+      "match": "^\\s*(style|actions|window|windows|if|repeat|component|for)\\b(?:\\s*=\\s*([^\\(]+))?\\s*(\\()",
       "captures": {
         "1": { "name": "keyword.control.txl" },
         "2": { "name": "variable.other.txl" },

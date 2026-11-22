@@ -19,7 +19,7 @@
   <path d="M867 210h206v34H867zm0 63h155v18H867zm0 46h228v18H867zm0 46h164v18H867zm0 46h204v18H867z" fill="#43b7ee" fill-opacity=".18"/>
   <rect x="824" y="180" width="302" height="252" rx="18" fill="#091624" stroke="#4e8eb0" stroke-opacity=".55"/>
   <circle cx="852" cy="204" r="5" fill="#f2b46b"/><circle cx="870" cy="204" r="5" fill="#6b8298"/><circle cx="888" cy="204" r="5" fill="#6b8298"/>
-  <text x="854" y="257" fill="#43b7ee" font-family="Consolas,monospace" font-size="19">windows (</text>
+  <text x="854" y="257" fill="#43b7ee" font-family="Consolas,monospace" font-size="19">window (</text>
   <text x="872" y="291" fill="#f2bf78" font-family="Consolas,monospace" font-size="17">mode:</text>
   <text x="943" y="291" fill="#c0e879" font-family="Consolas,monospace" font-size="17">maximized</text>
   <text x="854" y="326" fill="#43b7ee" font-family="Consolas,monospace" font-size="19">)</text>

@@ -44,10 +44,10 @@
     "body": ["position = x${1:18} y${2:3}"],
     "description": "Place an element inside an absolute Canvas"
   },
-  "windows": {
-    "prefix": "windows",
+  "window": {
+    "prefix": "window",
     "body": [
-      "windows (",
+      "window (",
       "  title: ${1:My TXL app}",
       "  icon: ${2:assets/app.ico}",
       "  size: ${3:1100x760}",

@@ -4,7 +4,7 @@ TXL compiles `.txl` source into native WPF desktop apps for Windows x64. The com
 
 ## Install the global `txl` command
 
-The recommended installer is a per-user .NET global tool. It does not need administrator privileges and adds the tool folder to your user PATH. After the `v0.6.0` GitHub Release is available, open PowerShell and run:
+The recommended installer is a per-user .NET global tool. It does not need administrator privileges and adds the tool folder to your user PATH. After a TXL GitHub Release is available, open PowerShell and run:
 
 ```powershell
 $installer = Join-Path $env:TEMP 'install-txl.ps1'
@@ -38,7 +38,9 @@ txl --build 'C:\Projects\MyTXLApp'
 
 The executable is written under `MyTXLApp\dist\<safe-app-name>\<safe-app-name>.exe`. When your app uses images, videos, or other content files, distribute the entire folder, including its `content` subfolder. The EXE itself is self-contained, but local media assets are copied alongside it.
 
-The `txl` command also accepts `--help`, `--version`, `--check`, `--preview`, `--build`, `check`, `preview`, `build`, and `run`. `preview` opens the native WPF window on Windows without producing the standalone EXE. It is a launched native window, not an embedded VS Code preview. `check` validates `info.json` and TXL source without publishing.
+Run `txl --update` from any folder to check the latest stable GitHub release and update the installed global CLI. The updater downloads the release package, verifies the GitHub asset size and SHA-256 digest, and invokes `dotnet tool update`; internet access and an existing global TXL installation are required. The installer above remains available for a fresh install.
+
+The `txl` command also accepts `--help`, `--version`, `--update`, `--check`, `--preview`, `--build`, `check`, `preview`, `build`, and `run`. `preview` opens the native WPF window on Windows without producing the standalone EXE. It is a launched native window, not an embedded VS Code preview. `check` validates `info.json` and TXL source without publishing.
 
 ## Use the project source and SDK directly
 

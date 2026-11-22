@@ -27,6 +27,7 @@ Open a new terminal, change to a TXL project folder, then run:
 
 ```powershell
 txl --version
+txl --update  # update the global compiler to the latest GitHub release
 txl --check
 txl --build
 ```
@@ -38,7 +39,7 @@ The installer downloads the latest compiler package from [GitHub Releases](https
 ## A TXL sample
 
 ```txl
-windows (
+window (
   title: Reading List
   size: 1100x760
   mode: normal

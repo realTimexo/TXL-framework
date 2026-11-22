@@ -5,7 +5,7 @@ TXL is a line-oriented language for compiling native Windows desktop interfaces 
 ## A small application
 
 ```txl
-windows (
+window (
   title: Reading List
   icon: assets/app.ico
   size: 1100x760
@@ -40,10 +40,10 @@ group = home (
 
 ## Windows and project defaults
 
-Use one optional `windows (` block near the top of `main.txl` to override the project defaults:
+Use one optional `window (` block near the top of `main.txl` to override the project defaults. The older `windows (` spelling remains accepted as a compatibility alias, but new source should use `window (`:
 
 ```txl
-windows (
+window (
   title: My application
   icon: assets/app.ico
   size: 1280x800

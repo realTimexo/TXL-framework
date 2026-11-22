@@ -119,7 +119,7 @@ public sealed class Parser
                 continue;
             }
 
-            if (Regex.IsMatch(source, @"^windows\s*\($", RegexOptions.IgnoreCase))
+            if (Regex.IsMatch(source, @"^window(?:s)?\s*\($", RegexOptions.IgnoreCase))
             {
                 ReadWindowsBlock(file, token);
                 continue;
@@ -417,7 +417,7 @@ public sealed class Parser
             WindowCatalog.Settings[name] = value;
         }
         var (last, lastFile) = lines.Count > 0 ? lines[^1] : (opening, file);
-        diagnostics.Add(new(lastFile, last.Line, last.Column, Severity.Error, "Missing closing ')' for the windows block."));
+        diagnostics.Add(new(lastFile, last.Line, last.Column, Severity.Error, "Missing closing ')' for the window block."));
     }
 
     private void CheckProperty(string file, Token token, string name, string value)
