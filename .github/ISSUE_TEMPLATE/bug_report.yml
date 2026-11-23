@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible TXL compiler, editor, or generated-app problem.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |-
+        Thanks for helping improve TXL. Please remove private information and include a small reproducible example where possible.
+  - type: input
+    id: version
+    attributes:
+      label: TXL version
+      description: Output of `txl --version` or the VS Code extension version.
+      placeholder: 0.7.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - TXL compiler or CLI
+        - Generated Windows app / WPF runtime
+        - VS Code extension
+        - Installer or documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and .NET SDK
+      placeholder: Windows 11, .NET SDK 9.0.200
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal TXL project or reproduction steps
+      description: Include the relevant .txl, info.json, and asset filenames. Use a fenced code block for TXL.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened?
+      description: Paste the full compiler output or describe the generated-app behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks already tried
+      description: Include `txl --check`, build output, and whether the issue was visually reproduced on Windows.
+    validations:
+      required: false

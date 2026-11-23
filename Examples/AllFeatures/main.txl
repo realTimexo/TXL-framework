@@ -1,8 +1,8 @@
 # TXL All Features Showcase
 # This file demonstrates features currently supported by the TXL compiler/runtime.
 # Compile and launch on Windows with: .\build.ps1
-# Gradient backgrounds, shadows, border/radius, theme switching, loading overlays,
-# custom modal forms, live editor inspection, and hot reload are not implemented yet.
+# Gradients, theme switching, loading overlays, custom modal forms, live editor inspection,
+# and hot reload are not implemented yet.
 
 window (
   title: TXL All Features
@@ -26,6 +26,12 @@ style (
     weight = bold
     padding = 10
     margin = 4
+    radius = 10
+    border = 1 #60A5FA
+    shadow = 4 12 #00000055
+  calculatorButtons:
+    layout = horizontal
+    align = center
   input:
     background = #FFFFFF
     color = #111827
@@ -85,6 +91,12 @@ actions (
   keyboardField(keydown):
     key = Enter
     alert = Enter key detected on the focused input.
+  businessPage(click):
+    page = business.txl
+  mainPage(click):
+    page = main.txl
+  contact(click):
+    open = mailto:hello@example.com
 )
 
 # Runtime state declarations seed persistent values on the first launch.
@@ -166,7 +178,6 @@ group = section (
   input = Second number
   bind = right
   group = calculatorButtons (
-    layout = horizontal
     button = Add
     action = math(add,left,right,calculationResult)
     button = Subtract
@@ -238,7 +249,14 @@ group = section (
 set = showTip:true
 if = showTip == true (
   text = Compile-time if: this text is included in the generated app.
+) else (
+  text = This alternate branch is selected when showTip is false.
 )
+text.headline2 = Heading level two
+text.headline3 = Heading level three
+text.headline4 = Heading level four
+text.headline5 = Heading level five
+embed = "<p><strong>Trusted inline HTML</strong> rendered by WPF WebBrowser.</p>"
 repeat = 2 (
   text = Compile-time repeat row ${index}
 )
@@ -249,4 +267,6 @@ group = section (
   text = More:
   button = Open TXL example site
   action = open(https://example.com)
+  button(businessPage) = Open the compiled business page
+  button(contact) = Email the author
 )

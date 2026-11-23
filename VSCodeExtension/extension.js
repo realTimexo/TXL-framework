@@ -35,9 +35,16 @@ const starter = [
 
 const elementCompletions = [
   ['text', 'text = ${1:Label}', 'Add a text label'],
-  ['text.headline', 'text.headline = ${1:Headline}', 'Add a large headline'],
+  ['text.headline', 'text.headline = ${1:Headline}', 'Add a large headline (alias of headline1)'],
+  ['text.headline1', 'text.headline1 = ${1:Heading}', 'Add a level 1 heading'],
+  ['text.headline2', 'text.headline2 = ${1:Heading}', 'Add a level 2 heading'],
+  ['text.headline3', 'text.headline3 = ${1:Heading}', 'Add a level 3 heading'],
+  ['text.headline4', 'text.headline4 = ${1:Heading}', 'Add a level 4 heading'],
+  ['text.headline5', 'text.headline5 = ${1:Heading}', 'Add a level 5 heading'],
   ['button', 'button = ${1:Label}', 'Add a button'],
   ['image', 'image = ${1:assets/image.png}', 'Show a local image or HTTP(S) URL'],
+  ['html', 'html = ${1:assets/page.html}', 'Embed a trusted local HTML page or HTTP(S) URL'],
+  ['embed', 'embed = \"${1:<h2>Embedded HTML</h2>}\"', 'Embed inline HTML (alias of html)'],
   ['video', 'video = ${1:assets/video.mp4}', 'Play a local video or HTTP(S) URL'],
   ['input', 'input = ${1:Placeholder}', 'Add an input with placeholder text'],
   ['checkbox', 'checkbox = ${1:Label}', 'Add a checkbox'],
@@ -58,7 +65,12 @@ const styleProperties = [
   ['width', 'width = ${1:320}', 'Set width'],
   ['height', 'height = ${1:180}', 'Set height'],
   ['position', 'position = x${1:18} y${2:3}', 'Position inside an absolute Canvas'],
-  ['opacity', 'opacity = ${1:1}', 'Set opacity']
+  ['opacity', 'opacity = ${1:1}', 'Set opacity'],
+  ['align', 'align = ${1|left,center,right,stretch|}', 'Align a text, control, or group'],
+  ['radius', 'radius = ${1:12}', 'Round button corners or framed elements'],
+  ['border', 'border = ${1:1 #333333}', 'Draw a border stroke'],
+  ['shadow', 'shadow = ${1:4 12 #00000066}', 'Add a drop shadow'],
+  ['layout', 'layout = ${1|vertical,horizontal,absolute|}', 'Choose group layout']
 ];
 
 const windowProperties = [
@@ -68,9 +80,13 @@ const windowProperties = [
   ['mode', 'mode: ${1|normal,maximized,fullscreen,borderless|}', 'Select the window mode']
 ];
 
-const googleFonts = ['Roboto','Open Sans','Lato','Montserrat','Poppins','Inter','Oswald','Raleway','Nunito','Roboto Condensed','Playfair Display','Merriweather','Ubuntu','Rubik','Work Sans','DM Sans','Source Sans 3','PT Sans','Noto Sans','Fira Sans','Manrope','Quicksand','Mulish','Barlow','Karla','Cabin','Libre Franklin','Josefin Sans','Space Grotesk','Outfit','Plus Jakarta Sans','IBM Plex Sans','Inconsolata','Roboto Mono','Fira Code','Source Code Pro','JetBrains Mono','Space Mono','Bebas Neue','Comfortaa','Dancing Script','Pacifico','Lobster','Abril Fatface','Archivo','Arimo','Asap','Barlow Condensed','Bitter','Cairo','Crimson Text','DM Serif Display','Heebo','Jost','Kanit','Lexend','Libre Baskerville','Lora','Maven Pro','Mukta','Nanum Gothic','Newsreader','Oxygen','Prompt','Sora','Titillium Web','Urbanist','Varela Round','Yanone Kaffeesatz'];
+const googleFonts = ['Lilita One','Roboto','Open Sans','Lato','Montserrat','Poppins','Inter','Oswald','Raleway','Nunito','Roboto Condensed','Playfair Display','Merriweather','Ubuntu','Rubik','Work Sans','DM Sans','Source Sans 3','PT Sans','Noto Sans','Fira Sans','Manrope','Quicksand','Mulish','Barlow','Karla','Cabin','Libre Franklin','Josefin Sans','Space Grotesk','Outfit','Plus Jakarta Sans','IBM Plex Sans','Inconsolata','Roboto Mono','Fira Code','Source Code Pro','JetBrains Mono','Space Mono','Bebas Neue','Comfortaa','Dancing Script','Pacifico','Lobster','Abril Fatface','Archivo','Arimo','Asap','Barlow Condensed','Bitter','Cairo','Crimson Text','DM Serif Display','Heebo','Jost','Kanit','Lexend','Libre Baskerville','Lora','Maven Pro','Mukta','Nanum Gothic','Newsreader','Oxygen','Prompt','Sora','Titillium Web','Urbanist','Varela Round','Yanone Kaffeesatz'];
 const styleValues = {
   layout: ['vertical', 'horizontal', 'absolute'],
+  align: ['left', 'center', 'right', 'stretch'],
+  radius: ['4', '8', '12', '16'],
+  border: ['1 #333333', '2 #FFFFFF', '1 red'],
+  shadow: ['4 12 #00000066', 'none'],
   color: ['#20202A', '#F4F7FB', '#000000', '#FFFFFF', 'black', 'white', 'red', 'blue', 'green', 'transparent'],
   background: ['#20202A', '#F4F7FB', '#000000', '#FFFFFF', 'black', 'white', 'transparent'],
   size: ['12', '14', '16', '20', '24', '32', '48'],
@@ -104,7 +120,7 @@ function makeItems(rows, range) {
 
 function sourceClasses(document) {
   const classes = new Map();
-  const element = /^\s*(text|button|image|video|input|checkbox|list|line|space)\(([A-Za-z][\w-]*)\)/i;
+  const element = /^\s*(text|button|image|video|html|embed|input|checkbox|list|line|space)\(([A-Za-z][\w-]*)\)/i;
   for (let i = 0; i < document.lineCount; i++) {
     const match = document.lineAt(i).text.match(element);
     if (!match) continue;
@@ -124,7 +140,7 @@ async function mediaItems(document, position, beforeCursor, type) {
   const items = [];
   const folders = vscode.workspace.workspaceFolders || [];
   if (folders.length) {
-    const filters = type === 'video' ? '**/*.{mp4,m4v,mov,wmv,avi,webm}' : '**/*.{png,jpg,jpeg,gif,bmp,webp,ico}';
+    const filters = type === 'video' ? '**/*.{mp4,m4v,mov,wmv,avi,webm}' : type === 'html' ? '**/*.html' : '**/*.{png,jpg,jpeg,gif,bmp,webp,ico}';
     const files = await vscode.workspace.findFiles(filters, '**/{node_modules,.git,dist,.txl-generated}/**', 100);
     for (const file of files) {
       const root = folders.find(folder => file.fsPath.startsWith(folder.uri.fsPath + path.sep)) || folders[0];
@@ -136,7 +152,7 @@ async function mediaItems(document, position, beforeCursor, type) {
   }
   const remote = new vscode.CompletionItem('https:// media URL', vscode.CompletionItemKind.Value);
   remote.detail = 'Remote media must use HTTP or HTTPS'; remote.range = range;
-  remote.insertText = new vscode.SnippetString('https://${1:example.com/media.' + (type === 'video' ? 'mp4' : 'png') + '}');
+  remote.insertText = new vscode.SnippetString('https://${1:example.com/media.' + (type === 'video' ? 'mp4' : type === 'html' ? 'html' : 'png') + '}');
   items.push(remote);
   return items;
 }
@@ -173,23 +189,25 @@ function activate(context) {
       }
       if (/\btext\.$/i.test(beforeCursor)) {
         const range = new vscode.Range(position.line, position.character - 5, position.line, position.character);
-        return makeItems([['text.headline', 'text.headline = ${1:Headline}', 'Large headline text']], range);
+        return makeItems([['text.headline', 'text.headline = ${1:Headline}', 'Large headline text'], ['text.headline1', 'text.headline1 = ${1:Heading}', 'Level 1 heading'], ['text.headline2', 'text.headline2 = ${1:Heading}', 'Level 2 heading'], ['text.headline3', 'text.headline3 = ${1:Heading}', 'Level 3 heading'], ['text.headline4', 'text.headline4 = ${1:Heading}', 'Level 4 heading'], ['text.headline5', 'text.headline5 = ${1:Heading}', 'Level 5 heading']], range);
       }
-      const media = beforeCursor.match(/^\s*(image|video)\s*=\s*(.*)$/i);
+      const media = beforeCursor.match(/^\s*(image|video|html)\s*=\s*(.*)$/i);
       if (media) return mediaItems(document, position, beforeCursor, media[1].toLowerCase());
-      if (/^\s*(?:text(?:\([^)]+\)|\.[\w-]+)?|button|image|video|input|checkbox|list|line|space)\s*=/.test(beforeCursor)) return [];
+      if (/^\s*(?:text(?:\([^)]+\)|\.[\w-]+)?|button|image|video|html|embed|input|checkbox|list|line|space)\s*=/.test(beforeCursor)) return [];
 
-      const propertyValue = beforeCursor.match(/^\s*(layout|color|background|font|size|weight|width|height|position|mode)\s*(?:=|:)\s*(.*)$/i);
+      const propertyValue = beforeCursor.match(/^\s*(layout|align|color|background|font|size|weight|width|height|position|radius|border|stroke|shadow|mode)\s*(?:=|:)\s*(.*)$/i);
       if (propertyValue) {
         const property = propertyValue[1].toLowerCase();
         const start = beforeCursor.search(/(?:=|:)\s*/) + beforeCursor.match(/(?:=|:)\s*/)[0].length;
         const range = new vscode.Range(position.line, start, position.line, position.character);
         if (property === 'font') {
           const partial = propertyValue[2].trim().toLowerCase();
-          return googleFonts.filter(font => !partial || font.toLowerCase().startsWith(partial)).map(font => {
+          const fontItems = googleFonts.filter(font => !partial || font.toLowerCase().startsWith(partial)).map(font => {
             const item = new vscode.CompletionItem(font, vscode.CompletionItemKind.Value);
-            item.detail = 'Font family name (must be installed on the target Windows PC)'; item.range = range; item.insertText = font; return item;
+            item.detail = 'Installed family name; alternatively use a direct HTTPS .ttf/.otf URL to package it'; item.range = range; item.insertText = font; return item;
           });
+          if (!partial || partial.startsWith('https://') || 'https://'.startsWith(partial)) { const remote = new vscode.CompletionItem('https:// downloadable .ttf/.otf font URL', vscode.CompletionItemKind.Value); remote.detail = 'Build downloads and packages direct HTTPS TTF/OTF fonts'; remote.range = range; remote.insertText = new vscode.SnippetString('https://${1:fonts.example.com/font.ttf}'); fontItems.push(remote); }
+          return fontItems;
         }
         const values = property === 'mode' ? ['normal', 'maximized', 'fullscreen', 'borderless'] : styleValues[property] || [];
         const partial = propertyValue[2].trim().toLowerCase();

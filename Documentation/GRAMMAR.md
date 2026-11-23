@@ -1,6 +1,6 @@
 # TXL Language and Runtime Guide
 
-TXL is a line-oriented language for compiling native Windows desktop interfaces with WPF. Each non-empty line is one statement; indentation is for readability and does not determine scope. `#` starts a comment, except when it begins a hexadecimal color after `=` or `:`. Values can be quoted with single or double quotes. A block opens with `(` and closes with a standalone `)`.
+TXL is a line-oriented language for compiling native Windows desktop interfaces with WPF. Each non-empty line is one statement; indentation is for readability and does not determine scope. `#` starts a comment, except when it begins a hexadecimal color after `=` or `:`, or follows a numeric width/depth in a stroke or shadow value. Apostrophes inside ordinary unquoted text are preserved. Values can be quoted with single or double quotes. A block opens with `(` and closes with a standalone `)`.
 
 ## A small application
 
@@ -36,7 +36,7 @@ group = home (
 )
 ```
 
-`text.headline = ...` creates a large text label. The older `text(hl) = ...` form remains accepted for existing projects, but new code should use the dotted form.
+`text.headline = ...` aliases `text.headline1 = ...`. The five heading variants are `text.headline1` through `text.headline5`, progressively decreasing from 38 to 18 WPF device-independent pixels. The older `text(hl) = ...` form remains accepted.
 
 ## Windows and project defaults
 
@@ -76,7 +76,7 @@ Omitted values inherit project defaults: the title falls back to `info.json`'s `
 
 ## Styles, classes, and layout
 
-A style section uses `name:` and a property assignment. Supported rendered style values include `font`, `size`, `color`, `background`, `weight`, `margin`, `padding`, `width`, `height`, and `opacity`. For an image, `size = 160` makes a 160-by-160 uniform-fit box; `width` or `height` can set one dimension independently. The image keeps its proportions.
+A style section uses `name:` and a property assignment. Rendered style values include `font`, `size`, `color`, `background`, `weight`, `margin`, `padding`, `width`, `height`, `opacity`, `align`, `layout`, `radius`, `border`/`stroke`, and `shadow`. `align` accepts `left`, `center`, `right`, or `stretch`; `layout` accepts `vertical`, `horizontal`, or `absolute`. A style section matching a group name can set that group’s default layout and alignment. For an image, `size = 160` makes a 160-by-160 uniform-fit box; `width` or `height` can set one dimension independently. The image keeps its proportions.
 
 A parenthesized class such as `image(brandImage)` or `text(note)` selects a matching style section and can also receive class actions. You can define reusable styling for classes already used in the source:
 
@@ -95,13 +95,17 @@ group = panel (
 )
 ```
 
-A `group = name (` creates a layout group. `layout = vertical` stacks direct children top-to-bottom (the default); `horizontal` places them side-by-side. `absolute` creates a WPF Canvas. In an absolute group, position a child or the group itself using `position = x18 y3`. Values are fixed coordinates, not responsive constraints. `x = 18` and `y = 3` remain supported for older source files.
+A `group = name (` creates a layout group. `layout = vertical` stacks direct children top-to-bottom (the default); `horizontal` places them side-by-side; `absolute` creates a WPF Canvas. A matching group style can set the layout, for example `style (
+  buttons:
+    layout = vertical
+    align = center
+)`. In an absolute group, position a child or the group itself using `position = x18 y3`. Values are fixed coordinates, not responsive constraints. `x = 18` and `y = 3` remain supported for older source files.
 
-Gradients, shadows, border/radius rendering, responsive layout constraints, theme switching, and spacing tokens are not currently implemented.
+`align` applies horizontal alignment to text, controls, or a group. `radius = 12` rounds button corners and decorates framed text/image elements. `border = 2 #333333` or `stroke = 1 red` draws a stroke. `shadow = 4 12 #00000066` sets shadow depth, blur, and color; a color alone uses default depth/blur, and `shadow = none` clears it. Button background color is painted through a template binding so it remains visible with the rounded template. WPF layout is not responsive; shadows/borders are basic WPF effects rather than a full design system.
 
 ## Images and videos
 
-Local media paths are relative to the project folder and copied into the generated application's `content` folder. Project-root traversal such as `../outside.png` is rejected by the runtime path resolver. HTTP and HTTPS URLs are also accepted for images and videos; other remote URL schemes are rejected. Remote loading needs a working network connection at runtime.
+Local media paths are relative to the project folder and copied into the generated application's `content` folder. Project-root traversal such as `../outside.png` is rejected by the runtime path resolver. HTTP and HTTPS URLs are also accepted for images and videos; other remote URL schemes are rejected. Remote loading needs a working network connection at runtime. `font = https://host/font.ttf` or `.otf` downloads the font during `txl --build`/`txl --preview` and embeds it in the generated application; remote font builds require an internet connection. TXL restricts downloads to HTTPS on the standard port, validates public DNS addresses and font signatures, follows only a few HTTPS redirects, and caps downloads at 20 MiB. The family name is inferred from the filename, so descriptive filenames are recommended. `txl --check` validates the URL form without downloading it.
 
 ```txl
 style (
@@ -121,6 +125,15 @@ height = 270
 
 `video` creates a WPF media player with Play and Pause buttons. `autoplay` defaults to `true`; `loop` defaults to `false`. Video and audio format support depends on installed Windows codecs and the URL/file encoding. WPF media playback, streaming URLs, and codec behavior need to be tested on the target Windows version. A project can pass `txl --check` on Linux, but Linux cannot run or visually validate the native WPF window.
 
+## HTML embedding
+
+Use `html =` or its `embed =` alias with a single-line HTML string, a project-relative `.html` file, or an HTTP(S) URL. Project files are copied into the app content folder. The runtime uses WPF `WebBrowser`; its rendering capabilities depend on the Windows web engine and it is not a modern browser runtime. Treat embedded HTML and remote pages as trusted content. Remote embedding requires network access and only HTTP(S) schemes are accepted.
+
+```txl
+embed = "<h2>Welcome</h2><p>Embedded markup</p>"
+html = assets/about.html
+```
+
 ## Variables and `if` statements
 
 TXL has two simple kinds of values. `set` defines a compile-time value used while the compiler expands the source. `${name}` inserts it into text. A compile-time `if` includes its block when its expression is true:
@@ -135,10 +148,12 @@ if = isAdmin == true (
 
 if = isAdmin != true (
   text = Ask an administrator for access.
+) else (
+  text = Access granted.
 )
 ```
 
-`if` accepts `true`, `false`, a variable name, or one `name == value` / `name != value` comparison. Comparisons are case-insensitive strings. This is evaluated during compilation; it is not a live runtime condition.
+`if` accepts `true`, `false`, a variable name, or one `name == value` / `name != value` comparison. An optional `else (` block must immediately follow the closing `)` of its `if`. Comparisons are case-insensitive strings. Both branches are selected during compilation; this is not a live runtime condition.
 
 For values that change while the app is running, use `state` instead. State is stored as text and persisted as JSON under `%LocalAppData%\TXL\<AppName>\state.json` on Windows:
 
@@ -209,7 +224,8 @@ The current keyboard event set is a simple WPF key-down event with an optional k
 - `component = name (` defines a reusable compile-time block. Call it as `name(title: value)`; `${title}` is substituted during compilation.
 - `for = item in collection (` expands a compile-time list. `repeat = N (` expands at most 1,000 times and provides zero-based `${index}`.
 - Calculator math supports `math(add|subtract|multiply|divide,left,right,result)` and writes a readable result for invalid input or division by zero.
-- `open = https://example.org` opens only HTTP(S) links. `page(path)` is retained but does not yet render a separate TXL page.
+- `open = https://example.org` opens HTTP(S) links; `open = mailto:hello@example.org` launches the system mail handler. Other URI schemes are ignored.
+- `page = business.txl` or `page(business.txl)` navigates to another `.txl` file compiled from within the project. Paths are normalized and traversal is rejected; all project `.txl` files are parsed at build/check time, and Back returns to the previous compiled page.
 
 These are intentionally small compile-time and runtime features, not a reactive application framework.
 
@@ -228,4 +244,4 @@ The command aliases `txl check`, `txl build`, `txl preview`, and `txl run` are a
 
 The supported global installation uses the .NET tool system and is global to the current Windows user, not machine-wide. It does not require administrator rights. Building projects requires the .NET 9 SDK, which the included `Installer/install.ps1` can install to the user profile when missing. The installer downloads the latest TXL CLI NuGet package from the GitHub Releases page. Add `%USERPROFILE%\.dotnet\tools` to PATH (the installer does this) and open a new terminal after installation. Building still needs network access for NuGet restore if packages are not already cached.
 
-The standalone generated app runs on Windows. Cross-publishing on Linux is supported, but WPF appearance, keyboard events, icons, and media playback must be checked on Windows. See [the Windows build guide](BUILD-WINDOWS.md) for setup and troubleshooting.
+The standalone generated app runs on Windows. Cross-publishing on Linux is supported, but WPF appearance, alignment, rounded button templates, shadows/borders, HTML behavior, navigation, keyboard events, icons, and media playback must be checked on Windows. See [the Windows build guide](BUILD-WINDOWS.md) for setup and troubleshooting.

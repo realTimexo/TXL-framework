@@ -14,6 +14,16 @@
     "body": ["text.headline = ${1:Headline}"],
     "description": "Add a large text.headline label"
   },
+  "headline 2": {
+    "prefix": "headline2",
+    "body": ["text.headline2 = ${1:Heading}"],
+    "description": "Add a level 2 heading"
+  },
+  "html embed": {
+    "prefix": "html",
+    "body": ["html = ${1:assets/page.html}"],
+    "description": "Embed a trusted local HTML page or HTTP(S) URL"
+  },
   "video": {
     "prefix": "video",
     "body": ["video = ${1:assets/video.mp4}", "autoplay = ${2:true}", "loop = ${3:false}"],

@@ -149,12 +149,12 @@ Test("invalid semver rejected", () =>
     try { var result = ProjectValidator.Validate(directory); if (!result.Diagnostics.Any(d => d.Message.Contains("Invalid version"))) throw new Exception("version accepted"); }
     finally { Directory.Delete(directory, true); }
 });
-Test("dotted text.headline syntax maps to large text", () =>
+Test("dotted text.headline syntax aliases to headline1", () =>
 {
     var parsed = Parser.Parse("text.headline = TXL headline");
-    if (parsed.Program?.Nodes[0] is not Element { Kind: "text", Variant: "headline", Value: "TXL headline" }) throw new Exception(string.Join(";", parsed.Diagnostics));
+    if (parsed.Program?.Nodes[0] is not Element { Kind: "text", Variant: "headline1", Value: "TXL headline" }) throw new Exception(string.Join(";", parsed.Diagnostics));
     var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
-    if (!emitted.Contains("variant is") || !emitted.Contains("headline") || !emitted.Contains("?30:16")) throw new Exception("headline default size was not emitted");
+    if (!emitted.Contains("\"headline1\"=>38") || !emitted.Contains("\"headline5\"=>18")) throw new Exception("headline level defaults were not emitted");
 });
 Test("window block overrides title icon size and mode", () =>
 {
@@ -202,6 +202,79 @@ Test("position syntax and video flags receive actionable diagnostics", () =>
     var badVideo = Parser.Parse("video = assets/clip.mp4\nautoplay = maybe");
     if (!badPosition.Diagnostics.Any(d => d.Message.Contains("Position must use")) || !badVideo.Diagnostics.Any(d => d.Message.Contains("must be true or false"))) throw new Exception("invalid property was not diagnosed");
 });
+
+Test("apostrophes in ordinary long text do not become quote delimiters", () =>
+{
+    const string sentence = "Let's build a simple TXL app; it doesn't need quoted text.";
+    var parsed = Parser.Parse("text = " + sentence);
+    if (parsed.Program?.Nodes[0] is not Element { Value: var value } || value != sentence) throw new Exception(string.Join(";", parsed.Diagnostics));
+});
+Test("if/else selects the matching compile-time branch", () =>
+{
+    var parsed = Parser.Parse("if = false (\ntext = wrong\n)\nelse (\ntext = right\n)");
+    if (parsed.Program?.Nodes[0] is not Conditional { ElseChildren.Count: 1 }) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (emitted.Contains("wrong") || !emitted.Contains("right")) throw new Exception("else branch was not selected for false condition");
+    var inline = Parser.Parse("if = true (\ntext = yes\n) else (\ntext = no\n)");
+    if (inline.Program?.Nodes[0] is not Conditional { ElseChildren.Count: 1 }) throw new Exception("inline `) else (` syntax was not parsed");
+    var orphan = Parser.Parse("else (\ntext = wrong\n)");
+    if (!orphan.Diagnostics.Any(d => d.Message.Contains("must immediately follow"))) throw new Exception("dangling else was not diagnosed");
+});
+Test("headline1 through headline5 have ordered generated sizes", () =>
+{
+    var parsed = Parser.Parse("text.headline1 = A\ntext.headline2 = B\ntext.headline3 = C\ntext.headline4 = D\ntext.headline5 = E");
+    if (parsed.Program?.Nodes.OfType<Element>().Select(e => e.Variant).ToArray() is not ["headline1", "headline2", "headline3", "headline4", "headline5"]) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!new[] { "\"headline1\"=>38", "\"headline2\"=>32", "\"headline3\"=>26", "\"headline4\"=>21", "\"headline5\"=>18" }.All(emitted.Contains)) throw new Exception("one or more heading levels were omitted");
+});
+Test("style alignment, vertical group layout, rounded button fill, border and shadow are emitted", () =>
+{
+    var parsed = Parser.Parse("style (\nmain:\nalign = center\nbutton:\nbackground = red\nradius = 14\nborder = 2 #333333\nshadow = 4 12 #00000066\nmenu:\nlayout = vertical\nalign = center\n)\ngroup = menu (\nlayout = vertical\nalign = right\nbutton = One\nbutton = Two\n)");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("RoundedButtonTemplate(r)") || !emitted.Contains("TemplateBindingExtension(Control.BackgroundProperty)") || !emitted.Contains("HorizontalAlignment.Center") || !emitted.Contains("Orientation.Vertical") || !emitted.Contains("DropShadowEffect") || !emitted.Contains("BorderThickness=new Thickness(thickness)") || !emitted.Contains("__groupProps_panel_0")) throw new Exception("one or more style behaviors were not emitted");
+});
+Test("HTML and embed aliases generate a WPF browser with safe URL handling", () =>
+{
+    var parsed = Parser.Parse("embed = \"<h1>TXL</h1>\"\nhtml = https://example.com/embed.html");
+    if (parsed.Program?.Nodes is not [Element { Kind: "html", Value: var inline }, Element { Kind: "html", Value: var remote }] || inline != "<h1>TXL</h1>" || remote != "https://example.com/embed.html") throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("WebBrowser MakeHtml") || !emitted.Contains("NavigateToString(source)") || !emitted.Contains("Embedded HTML URLs must use HTTP or HTTPS")) throw new Exception("HTML rendering/security path missing");
+});
+Test("mailto is accepted by the safe open action", () =>
+{
+    var parsed = Parser.Parse("actions (\ncontact(click):\nopen = mailto:hello@example.com\n)\nbutton(contact) = Email");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("uri.Scheme is \"https\" or \"http\" or \"mailto\"") || !emitted.Contains("mailto:hello@example.com")) throw new Exception("mailto scheme not emitted");
+});
+Test("page navigation compiles distinct page views and pushes current-page history", () =>
+{
+    var main = Parser.Parse("button = Business\naction = page(business.txl)", "main.txl");
+    var business = Parser.ParseAdditionalPage("text.headline = Business page", "business.txl");
+    if (main.Program is null || business.Program is null) throw new Exception(string.Join(";", main.Diagnostics.Concat(business.Diagnostics)));
+    var pages = new Dictionary<string, ProgramAst>(StringComparer.OrdinalIgnoreCase) { ["main.txl"] = main.Program, ["business.txl"] = business.Program };
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), main.Program, ".", pages);
+    if (!emitted.Contains("case \"business.txl\":{") || !emitted.Contains("Business page") || !emitted.Contains("history.Push(currentPage)") || !emitted.Contains("Page must be a project-relative .txl file")) throw new Exception("page compilation, root validation, or back history missing");
+});
+Test("remote font URLs require HTTPS and explicit TTF or OTF extensions", () =>
+{
+    var good = Parser.Parse("style (\nmain:\nfont = https://fonts.example/lilita-one.regular.ttf\n)\ntext = Hi");
+    if (good.Program is null) throw new Exception(string.Join(";", good.Diagnostics));
+    var badHttp = Parser.Parse("style (\nmain:\nfont = http://fonts.example/font.ttf\n)\ntext = Hi");
+    var badType = Parser.Parse("style (\nmain:\nfont = https://fonts.example/font.woff\n)\ntext = Hi");
+    if (!badHttp.Diagnostics.Any(d => d.Message.Contains("Remote fonts must be HTTPS")) || !badType.Diagnostics.Any(d => d.Message.Contains("Remote fonts must be HTTPS"))) throw new Exception("unsafe font URL was accepted");
+    var project = WpfEmitter.ProjectFile(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()));
+    if (!project.Contains("Resource Include=\"content/fonts/**/*\"")) throw new Exception("font resource package missing");
+});
+Test("VS Code starter includes a window block and foundational TXL structure", () =>
+{
+    var starterFile = Path.Combine(Directory.GetCurrentDirectory(), "VSCodeExtension", "extension.js");
+    if (!File.Exists(starterFile)) throw new Exception("run the harness from the repository root");
+    var extension = File.ReadAllText(starterFile);
+    if (!extension.Contains("'window ('") || !extension.Contains("'style ('") || !extension.Contains("'actions ('") || !extension.Contains("'group = main ('")) throw new Exception("starter structure is incomplete");
+});
+
 Console.WriteLine($"{passed} passed, {failed} failed.");
 if (failed > 0) Environment.ExitCode = 1;
 

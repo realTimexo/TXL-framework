@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: TXL documentation
+    url: https://github.com/realTimexo/TXL-framework/tree/main/Documentation
+    about: Check the grammar and Windows build guides before opening a question.

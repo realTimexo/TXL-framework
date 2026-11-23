@@ -2,6 +2,23 @@
 
 Notable changes to TXL are recorded here. Versions follow semantic versioning where practical. The release page contains distributable packages and release-specific installation links.
 
+## [0.8.0] — 2026-11-23
+
+### Added
+
+- `if`/`else` compile-time branch selection with a diagnostic for orphaned `else` blocks; apostrophes in ordinary text no longer trigger quote errors.
+- `text.headline1` through `text.headline5`, with `text.headline` retained as an alias.
+- Rendered alignment, style-derived group layout, rounded buttons, basic border/stroke and drop-shadow styles, plus deterministic button-background templates.
+- `html =` and `embed =` for trusted inline markup, project HTML files, or HTTP(S) pages in a WPF WebBrowser control.
+- Safe `mailto:` launch support and project-relative multi-page TXL navigation with Back history.
+- Build-time HTTPS TTF/OTF font packaging with size, signature, redirect, and public-host validation.
+- GitHub bug-report and feature-request issue forms, plus regression coverage for the new features.
+
+### Validation note
+
+- `dotnet build TXL.slnx` succeeds; all 39 regression tests pass; all five example projects pass `txl --check`; AllFeatures cross-publishes to Windows x64 on Linux; the specified 1001fonts TTF was downloaded, packaged, and cross-published in a temporary test project. WPF visual/runtime behavior still requires a Windows user-session test.
+- GitHub Actions v0.8.0 release workflow will run its own Windows build, tests, VSIX packaging, sample EXE build, and upload the CLI package, VSIX, Windows sample ZIP, and clean sample-source ZIP after the tag is pushed.
+
 ## [0.7.0] — 2026-11-22
 
 ### Added

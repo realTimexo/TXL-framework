@@ -40,6 +40,9 @@ jobs:
       - name: Zip AllFeatures distribution
         shell: pwsh
         run: Compress-Archive -Path Examples/AllFeatures/dist/TXL_All_Features -DestinationPath artifacts/TXL-AllFeatures-${{ github.ref_name }}-win-x64.zip -CompressionLevel Optimal
+      - name: Archive AllFeatures source project
+        shell: pwsh
+        run: git archive --format=zip --prefix=TXL-AllFeatures/ --output=artifacts/TXL-AllFeatures-source-${{ github.ref_name }}.zip $env:GITHUB_REF_NAME Examples/AllFeatures
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:

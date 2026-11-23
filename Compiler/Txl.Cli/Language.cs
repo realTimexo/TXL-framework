@@ -12,7 +12,7 @@ public sealed record Token(string Value, int Line, int Column, bool Quoted = fal
 public abstract record Node(int Line);
 public sealed record Element(string Kind, string? Variant, string Value, Dictionary<string, string> Properties, int Line) : Node(Line);
 public sealed record Group(string Name, Dictionary<string, string> Properties, List<Node> Children, int Line) : Node(Line);
-public sealed record Conditional(string Expression, List<Node> Children, int Line) : Node(Line);
+public sealed record Conditional(string Expression, List<Node> Children, List<Node> ElseChildren, int Line) : Node(Line);
 public sealed record SetVariable(string Name, string Value, int Line) : Node(Line);
 public sealed record StateVariable(string Name, string InitialValue, int Line) : Node(Line);
 public sealed record Repeat(string Expression, List<Node> Children, int Line) : Node(Line);
@@ -47,10 +47,11 @@ public static class Lexer
                 {
                     var beforeHash = end - 1;
                     while (beforeHash >= start && char.IsWhiteSpace(line[beforeHash])) beforeHash--;
-                    var isHexColor = beforeHash >= start && (line[beforeHash] is '=' or ':') && Regex.IsMatch(line[(end + 1)..], @"^(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})(?:\s|$)");
+                    var isNumericColorValue = beforeHash >= start && char.IsWhiteSpace(line[end - 1]) && Regex.IsMatch(line[start..(beforeHash + 1)].Trim(), @"(?:^|\s)(?:\d+(?:\.\d+)?|solid)$", RegexOptions.IgnoreCase);
+                    var isHexColor = beforeHash >= start && ((line[beforeHash] is '=' or ':') || isNumericColorValue) && Regex.IsMatch(line[(end + 1)..], @"^(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})(?:\s|$)");
                     if (!isHexColor) break;
                 }
-                if (c is '"' or '\'')
+                if (c == '"' || (c == '\'' && (inQuote ? quote == c : end == start || char.IsWhiteSpace(line[end - 1]))))
                 {
                     if (!inQuote) { inQuote = true; quote = c; }
                     else if (quote == c) inQuote = false;
@@ -74,6 +75,7 @@ public sealed class Parser
     private readonly List<(Token Token, string File)> lines;
     private readonly List<Diagnostic> diagnostics;
     private int position;
+    private bool closesWithInlineElse;
 
     private Parser(List<(Token, string)> tokens, List<Diagnostic> diagnostics)
     {
@@ -81,29 +83,42 @@ public sealed class Parser
         this.diagnostics = diagnostics;
     }
 
-    public static ParseResult Parse(string text, string file = "main.txl")
+    public static ParseResult Parse(string text, string file = "main.txl") => ParseCore(text, file, true);
+
+    public static ParseResult ParseAdditionalPage(string text, string file) => ParseCore(text, file, false);
+
+    private static ParseResult ParseCore(string text, string file, bool resetCatalogs)
     {
-        StyleCatalog.Reset();
-        ActionCatalog.Reset();
-        ComponentCatalog.Reset();
-        RuntimeStateCatalog.Reset();
-        WindowCatalog.Reset();
+        if (resetCatalogs)
+        {
+            StyleCatalog.Reset();
+            ActionCatalog.Reset();
+            ComponentCatalog.Reset();
+            RuntimeStateCatalog.Reset();
+            WindowCatalog.Reset();
+        }
         var diagnostics = new List<Diagnostic>();
         var parser = new Parser(Lexer.Lines(text, file, diagnostics), diagnostics);
         var nodes = parser.ReadBlock(false);
         return new ParseResult(diagnostics.Any(d => d.Severity == Severity.Error) ? null : new ProgramAst(nodes), diagnostics);
     }
 
-    private List<Node> ReadBlock(bool nested, Dictionary<string, string>? groupProperties = null)
+    private List<Node> ReadBlock(bool nested, Dictionary<string, string>? groupProperties = null, bool allowInlineElse = false)
     {
         var nodes = new List<Node>();
         while (position < lines.Count)
         {
             var (token, file) = lines[position++];
             var source = token.Value.Trim();
-            if (source == ")" || source.Equals("end", StringComparison.OrdinalIgnoreCase))
+            var inlineElse = Regex.IsMatch(source, @"^\)\s*else\s*\($", RegexOptions.IgnoreCase);
+            if (source == ")" || source.Equals("end", StringComparison.OrdinalIgnoreCase) || inlineElse)
             {
                 if (!nested) diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Unexpected block terminator '{source}'."));
+                else if (inlineElse)
+                {
+                    if (allowInlineElse) closesWithInlineElse = true;
+                    else diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "An 'else (' block must immediately follow an 'if' block."));
+                }
                 return nodes;
             }
 
@@ -122,6 +137,13 @@ public sealed class Parser
             if (Regex.IsMatch(source, @"^window(?:s)?\s*\($", RegexOptions.IgnoreCase))
             {
                 ReadWindowsBlock(file, token);
+                continue;
+            }
+
+            if (Regex.IsMatch(source, @"^else\s*\($", RegexOptions.IgnoreCase))
+            {
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "An 'else (' block must immediately follow an 'if = condition (' block."));
+                ReadBlock(true);
                 continue;
             }
 
@@ -161,7 +183,7 @@ public sealed class Parser
             var conditional = Regex.Match(source, @"^if\s*=\s*(.*?)\s*\($", RegexOptions.IgnoreCase);
             if (conditional.Success)
             {
-                nodes.Add(new Conditional(conditional.Groups[1].Value.Trim(), ReadBlock(true), token.Line));
+                nodes.Add(ReadConditional(conditional.Groups[1].Value.Trim(), token.Line));
                 continue;
             }
 
@@ -180,7 +202,7 @@ public sealed class Parser
             }
             if (TryAssignment(source, "if", out var legacyIf))
             {
-                nodes.Add(new Conditional(legacyIf, ReadBlock(true), token.Line));
+                nodes.Add(ReadConditional(legacyIf, token.Line));
                 continue;
             }
             if (TryAssignment(source, "repeat", out var legacyRepeat))
@@ -225,12 +247,15 @@ public sealed class Parser
             if (element.Success)
             {
                 var kind = element.Groups[1].Value.ToLowerInvariant();
-                if (kind is not ("text" or "button" or "image" or "video" or "input" or "checkbox" or "list" or "line" or "space"))
+                if (kind == "embed") kind = "html";
+                if (kind is not ("text" or "button" or "image" or "video" or "html" or "embed" or "input" or "checkbox" or "list" or "line" or "space"))
                 {
                     diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Unknown command '{kind}'."));
                     continue;
                 }
                 var variant = element.Groups[2].Success ? element.Groups[2].Value : element.Groups[3].Success ? element.Groups[3].Value : null;
+                if (kind == "text" && string.Equals(variant, "headline", StringComparison.OrdinalIgnoreCase)) variant = "headline1";
+                if (kind == "text" && variant is not null && Regex.IsMatch(variant, @"^headline[1-5]$", RegexOptions.IgnoreCase)) variant = variant.ToLowerInvariant();
                 var value = element.Groups[4].Success ? Unquote(element.Groups[4].Value) : string.Empty;
                 var properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 while (position < lines.Count)
@@ -263,6 +288,24 @@ public sealed class Parser
             diagnostics.Add(new(file, last.Line, last.Column, Severity.Error, "Missing closing ')' for this block."));
         }
         return nodes;
+    }
+
+    private Conditional ReadConditional(string expression, int line)
+    {
+        closesWithInlineElse = false;
+        var children = ReadBlock(true, allowInlineElse: true);
+        var elseChildren = new List<Node>();
+        if (closesWithInlineElse)
+        {
+            closesWithInlineElse = false;
+            elseChildren = ReadBlock(true);
+        }
+        else if (position < lines.Count && Regex.IsMatch(lines[position].Token.Value.Trim(), @"^else\s*\($", RegexOptions.IgnoreCase))
+        {
+            position++;
+            elseChildren = ReadBlock(true);
+        }
+        return new Conditional(expression, children, elseChildren, line);
     }
 
     private void ReadStyleBlock(string file, Token opening)
@@ -425,11 +468,26 @@ public sealed class Parser
         var normalized = name.ToLowerInvariant();
         if (normalized == "position" && !Regex.IsMatch(value, @"^x\s*-?\d+(?:\.\d+)?\s+y\s*-?\d+(?:\.\d+)?$", RegexOptions.IgnoreCase))
             diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Position must use 'xNUMBER yNUMBER', for example 'position = x18 y3'."));
-        if (normalized is "size" or "width" or "height" or "x" or "y")
+        if (normalized is "size" or "width" or "height" or "x" or "y" or "radius")
         {
-            if (!double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number) || number < 0 || number > 10000)
-                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Property '{name}' must be a number between 0 and 10000."));
+            var max = normalized == "radius" ? 200 : 10000;
+            if (!double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number) || !double.IsFinite(number) || number < 0 || number > max)
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Property '{name}' must be a number between 0 and {max}."));
         }
+        if (normalized == "font" && value.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            var extension = Uri.TryCreate(value, UriKind.Absolute, out var fontUri) ? Path.GetExtension(fontUri.AbsolutePath) : string.Empty;
+            if (fontUri is null || fontUri.Scheme != Uri.UriSchemeHttps || !(extension.Equals(".ttf", StringComparison.OrdinalIgnoreCase) || extension.Equals(".otf", StringComparison.OrdinalIgnoreCase)))
+                diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Remote fonts must be HTTPS URLs ending in .ttf or .otf. TXL downloads and packages the font during build."));
+        }
+        if (normalized == "align" && value.ToLowerInvariant() is not ("left" or "center" or "right" or "stretch"))
+            diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Alignment must be left, center, right, or stretch."));
+        if (normalized == "layout" && value.ToLowerInvariant() is not ("vertical" or "horizontal" or "absolute" or "canvas"))
+            diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Layout must be vertical, horizontal, or absolute."));
+        if (normalized is "border" or "stroke" && !Regex.IsMatch(value, @"^(?:(?:\d+(?:\.\d+)?\s+)?(?:solid\s+)?)?(?:#[0-9a-fA-F]{3,8}|[A-Za-z][A-Za-z0-9 _-]*)$"))
+            diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Border/stroke must be a color or a width and color, such as '1 #333333'."));
+        if (normalized == "shadow" && !Regex.IsMatch(value, @"^(?:none|(?:(?:\d+(?:\.\d+)?\s+){0,2})(?:#[0-9a-fA-F]{3,8}|[A-Za-z][A-Za-z0-9 _-]*))$", RegexOptions.IgnoreCase))
+            diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Shadow must be a color or 'depth blur color', such as '4 12 #00000066'."));
         if ((normalized is "autoplay" or "loop") && !bool.TryParse(value, out _))
             diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Property '{name}' must be true or false."));
     }
@@ -441,7 +499,7 @@ public sealed class Parser
         return match.Success;
     }
 
-    private static bool IsKnownProperty(string name) => name.ToLowerInvariant() is "font" or "size" or "color" or "background" or "weight" or "radius" or "padding" or "margin" or "width" or "height" or "opacity" or "align" or "shadow" or "border" or "hover" or "cursor" or "layout" or "x" or "y" or "position";
+    private static bool IsKnownProperty(string name) => name.ToLowerInvariant() is "font" or "size" or "color" or "background" or "weight" or "radius" or "padding" or "margin" or "width" or "height" or "opacity" or "align" or "shadow" or "border" or "stroke" or "hover" or "cursor" or "layout" or "x" or "y" or "position";
 
     private static string Unquote(string value)
     {

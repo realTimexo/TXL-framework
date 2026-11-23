@@ -29,8 +29,18 @@ var validation = ProjectValidator.Validate(project);
 if (!PrintDiagnostics(validation.Diagnostics, project)) return 1;
 var info = validation.Info!;
 var source = Path.Combine(project, info.Start);
-var parsed = Parser.Parse(File.ReadAllText(source), source);
-if (!PrintDiagnostics(parsed.Diagnostics, project)) return 1;
+var parsed = Parser.Parse(File.ReadAllText(source), info.Start.Replace('\\', '/'));
+var pagePrograms = new Dictionary<string, ProgramAst>(StringComparer.OrdinalIgnoreCase) { [info.Start.Replace('\\', '/')] = parsed.Program ?? new ProgramAst(new List<Node>()) };
+var pageDiagnostics = new List<Diagnostic>(parsed.Diagnostics);
+foreach (var pageFile in Directory.GetFiles(project, "*.txl", SearchOption.AllDirectories).Where(file => !Path.GetRelativePath(project, file).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part => part is "dist" or ".txl-generated" or ".git" or "bin" or "obj")))
+{
+    var relative = Path.GetRelativePath(project, pageFile).Replace('\\', '/');
+    if (relative.Equals(info.Start.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)) continue;
+    var page = Parser.ParseAdditionalPage(File.ReadAllText(pageFile), relative);
+    pageDiagnostics.AddRange(page.Diagnostics);
+    if (page.Program is not null) pagePrograms[relative] = page.Program;
+}
+if (!PrintDiagnostics(pageDiagnostics, project)) return 1;
 if (WindowCatalog.Settings.TryGetValue("icon", out var windowIcon) && !File.Exists(Path.Combine(project, windowIcon)))
 {
     PrintDiagnostics(new List<Diagnostic> { new(source, 1, 1, Severity.Error, $"Window icon '{windowIcon}' does not exist. Add the icon file under the project folder or change the path in the window block.") }, project);
@@ -71,7 +81,8 @@ try
     Directory.CreateDirectory(Path.GetDirectoryName(contentIcon)!);
     if (File.Exists(bundledIcon)) File.Copy(bundledIcon, contentIcon, true);
 
-    File.WriteAllText(Path.Combine(generated, "Runtime.cs"), WpfEmitter.Emit(info, parsed.Program!, project));
+    await PackageRemoteFontsAsync(generated);
+    File.WriteAllText(Path.Combine(generated, "Runtime.cs"), WpfEmitter.Emit(info, parsed.Program!, project, pagePrograms));
     File.WriteAllText(Path.Combine(generated, "GeneratedApp.csproj"), WpfEmitter.ProjectFile(info));
     if (command == "preview")
     {
@@ -117,6 +128,93 @@ catch (Exception error)
 }
 
 static string SafeName(string value) => string.Concat(value.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));
+
+static async Task PackageRemoteFontsAsync(string generated)
+{
+    const long maxBytes = 20 * 1024 * 1024;
+    var fontsDirectory = Path.Combine(generated, "content", "fonts");
+    using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+    using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
+    var packaged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    foreach (var style in StyleCatalog.Styles.Values)
+    {
+        if (!style.TryGetValue("font", out var font) || !font.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) continue;
+        if (!packaged.TryGetValue(font, out var local))
+        {
+            var uri = new Uri(font, UriKind.Absolute);
+            await EnsurePublicHttpsHostAsync(uri);
+            HttpResponseMessage? response = null;
+            for (var redirects = 0; redirects <= 3; redirects++)
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                if ((int)response.StatusCode is >= 300 and < 400)
+                {
+                    var location = response.Headers.Location ?? throw new InvalidOperationException($"Remote font redirect from '{font}' did not include a destination.");
+                    var next = location.IsAbsoluteUri ? location : new Uri(uri, location);
+                    response.Dispose();
+                    if (redirects == 3) throw new InvalidOperationException($"Remote font '{font}' redirected too many times.");
+                    await EnsurePublicHttpsHostAsync(next);
+                    uri = next;
+                    continue;
+                }
+                break;
+            }
+            using (response ?? throw new InvalidOperationException($"Could not download remote font '{font}'."))
+            {
+                response.EnsureSuccessStatusCode();
+                if (response.Content.Headers.ContentLength is long length && length > maxBytes) throw new InvalidOperationException($"Remote font '{font}' exceeds the 20 MiB download limit.");
+                await using var stream = await response.Content.ReadAsStreamAsync();
+                using var buffer = new MemoryStream();
+                var chunk = new byte[64 * 1024];
+                while (true)
+                {
+                    var read = await stream.ReadAsync(chunk);
+                    if (read == 0) break;
+                    if (buffer.Length + read > maxBytes) throw new InvalidOperationException($"Remote font '{font}' exceeds the 20 MiB download limit.");
+                    buffer.Write(chunk, 0, read);
+                }
+                var bytes = buffer.ToArray();
+                if (bytes.Length < 12 || !(bytes.AsSpan(0, 4).SequenceEqual(new byte[] { 0, 1, 0, 0 }) || bytes.AsSpan(0, 4).SequenceEqual("OTTO"u8) || bytes.AsSpan(0, 4).SequenceEqual("true"u8)))
+                    throw new InvalidOperationException($"Remote file '{font}' is not a supported TrueType/OpenType font.");
+                var extension = Path.GetExtension(new Uri(font).AbsolutePath).ToLowerInvariant();
+                var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(font)))[..16].ToLowerInvariant();
+                var fileName = hash + extension;
+                Directory.CreateDirectory(fontsDirectory);
+                await File.WriteAllBytesAsync(Path.Combine(fontsDirectory, fileName), bytes);
+                var family = FontFamilyFromUrl(new Uri(font));
+                local = $"content/fonts/{fileName}#{family}";
+                packaged[font] = local;
+            }
+        }
+        style["font"] = local;
+    }
+}
+
+static string FontFamilyFromUrl(Uri uri)
+{
+    var stem = Path.GetFileNameWithoutExtension(uri.AbsolutePath);
+    var ignored = new HashSet<string>(new[] { "regular", "normal", "medium", "bold", "italic", "light", "thin", "black", "semibold", "extra", "variable" }, StringComparer.OrdinalIgnoreCase);
+    var words = stem.Split(new[] { '-', '_', '.', ' ' }, StringSplitOptions.RemoveEmptyEntries).Where(word => !ignored.Contains(word)).ToArray();
+    if (words.Length == 0) throw new InvalidOperationException($"Cannot infer a font family name from '{uri}'. Use a font URL with a descriptive filename.");
+    return string.Join(" ", words.Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
+}
+
+static async Task EnsurePublicHttpsHostAsync(Uri uri)
+{
+    if (uri.Scheme != Uri.UriSchemeHttps || uri.Port != 443 || !string.IsNullOrEmpty(uri.UserInfo)) throw new InvalidOperationException("Remote font URLs and redirects must use HTTPS on the standard port without embedded credentials.");
+    var addresses = System.Net.IPAddress.TryParse(uri.Host, out var literal) ? new[] { literal } : await System.Net.Dns.GetHostAddressesAsync(uri.Host);
+    if (addresses.Length == 0 || addresses.Any(IsNonPublicAddress)) throw new InvalidOperationException($"Remote font host '{uri.Host}' resolves to a non-public network address; refusing the download.");
+}
+
+static bool IsNonPublicAddress(System.Net.IPAddress address)
+{
+    if (System.Net.IPAddress.IsLoopback(address) || address.IsIPv6LinkLocal || address.IsIPv6SiteLocal || address.IsIPv6Multicast) return true;
+    var b = address.GetAddressBytes();
+    if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        return b[0] == 0 || b[0] == 10 || b[0] == 127 || b[0] >= 224 || (b[0] == 169 && b[1] == 254) || (b[0] == 172 && b[1] is >= 16 and <= 31) || (b[0] == 192 && b[1] == 168) || (b[0] == 100 && b[1] is >= 64 and <= 127);
+    return address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6 && ((b[0] & 0xFE) == 0xFC || address.IsIPv4MappedToIPv6 && IsNonPublicAddress(address.MapToIPv4()));
+}
 
 static bool PrintDiagnostics(IEnumerable<Diagnostic> diagnostics, string project)
 {
