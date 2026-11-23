@@ -43,6 +43,9 @@ jobs:
       - name: Archive AllFeatures source project
         shell: pwsh
         run: git archive --format=zip --prefix=TXL-AllFeatures/ --output=artifacts/TXL-AllFeatures-source-${{ github.ref_name }}.zip $env:GITHUB_REF_NAME Examples/AllFeatures
+      - name: Stage versioned PowerShell installer
+        shell: pwsh
+        run: Copy-Item Installer/install.ps1 artifacts/install-txl-${{ github.ref_name }}.ps1
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -51,3 +54,4 @@ jobs:
             artifacts/*.nupkg
             artifacts/*.vsix
             artifacts/*.zip
+            artifacts/*.ps1

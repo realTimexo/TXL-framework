@@ -4,7 +4,7 @@ TXL compiles `.txl` source into native WPF desktop apps for Windows x64. The com
 
 ## Install the global `txl` command
 
-The recommended installer is a per-user .NET global tool. It does not need administrator privileges and adds the tool folder to your user PATH. After a TXL GitHub Release is available, open PowerShell and run:
+The recommended installer is a per-user PowerShell setup script for the .NET global tool. Versioned copies are attached to each [TXL GitHub Release](https://github.com/realTimexo/TXL-framework/releases). The script does not need administrator privileges, adds the tool folder to your user PATH, and fetches the latest stable compiler release when run. To install from the current main branch, open PowerShell and run:
 
 ```powershell
 $installer = Join-Path $env:TEMP 'install-txl.ps1'

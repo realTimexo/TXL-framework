@@ -17,7 +17,7 @@ Notable changes to TXL are recorded here. Versions follow semantic versioning wh
 ### Validation note
 
 - `dotnet build TXL.slnx` succeeds; all 39 regression tests pass; all five example projects pass `txl --check`; AllFeatures cross-publishes to Windows x64 on Linux; the specified 1001fonts TTF was downloaded, packaged, and cross-published in a temporary test project. WPF visual/runtime behavior still requires a Windows user-session test.
-- GitHub Actions v0.8.0 release workflow will run its own Windows build, tests, VSIX packaging, sample EXE build, and upload the CLI package, VSIX, Windows sample ZIP, and clean sample-source ZIP after the tag is pushed.
+- GitHub Actions v0.8.0 release workflow built and tested on Windows, packaged the CLI, VSIX, Windows AllFeatures app, and clean source ZIP. A versioned PowerShell installer is also attached to the release; future releases will include it automatically.
 
 ## [0.7.0] — 2026-11-22
 

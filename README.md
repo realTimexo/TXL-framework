@@ -105,7 +105,7 @@ There is no hot reload, embedded VS Code preview, component inspector, inline pr
 
 ## Releases and versioning
 
-The [GitHub Releases page](https://github.com/realTimexo/TXL-framework/releases) is the source for published compiler packages, VS Code `.vsix` files, and Windows sample builds. Release notes are maintained in [`CHANGELOG.md`](CHANGELOG.md). A tagged `v*` release runs the Windows release workflow, builds the CLI NuGet tool, packages the VS Code extension, compiles the AllFeatures example, and attaches the NuGet CLI, VS Code VSIX, Windows AllFeatures build, and clean AllFeatures source ZIP to the GitHub Release. Releases are not created merely by changing the changelog.
+The [GitHub Releases page](https://github.com/realTimexo/TXL-framework/releases) is the source for published compiler packages, the versioned PowerShell installer, VS Code `.vsix` files, and Windows sample builds. Release notes are maintained in [`CHANGELOG.md`](CHANGELOG.md). A tagged `v*` release runs the Windows release workflow, builds the CLI NuGet tool, packages the VS Code extension, compiles the AllFeatures example, and attaches the NuGet CLI, versioned installer script, VS Code VSIX, Windows AllFeatures build, and clean AllFeatures source ZIP to the GitHub Release. Releases are not created merely by changing the changelog.
 
 ## Contributing
 
