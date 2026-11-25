@@ -1,6 +1,6 @@
 # TXL All Features Showcase
 
-This project demonstrates TXL syntax and runtime behavior across `main.txl` and `business.txl`: the `window (` starter block, style catalogs, group layout/alignment, rounded buttons, strokes and shadows, five headline sizes, inline HTML, placeholder and prefilled inputs, bound checkboxes, runtime state and local persistence, click/hover/keyboard actions, `mailto:` links, compiled multi-page navigation, calculator operations, native prompt/confirm/success dialogs, a persistent todo list, parameterized components, compile-time `for` iteration, x/y Canvas placement, and compile-time `set`/`if`/`else`/`repeat` constructs.
+This project demonstrates TXL syntax and runtime behavior across `main.txl`, `business.txl`, and the imported `modules/text.txl`: the `window (` starter block, style catalogs, group layout/alignment, rounded buttons, strokes and shadows, five headline sizes, inline HTML, placeholder and prefilled inputs, bound checkboxes, runtime state and local persistence, click/hover/keyboard actions, `mailto:` links, compiled multi-page navigation, calculator operations, native prompt/confirm/success dialogs, a persistent todo list, parameterized components, compile-time `for` iteration, x/y Canvas placement, compile-time `set`/`if`/`else`/`repeat`, custom functions, JSON array/object operations, confined file access, HTTP requests, timers, and SQLite.
 
 ## Validate and run
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Txl;
@@ -10,7 +11,7 @@ public sealed record Diagnostic(string File, int Line, int Column, Severity Seve
 }
 public sealed record Token(string Value, int Line, int Column, bool Quoted = false);
 public abstract record Node(int Line);
-public sealed record Element(string Kind, string? Variant, string Value, Dictionary<string, string> Properties, int Line) : Node(Line);
+public sealed record Element(string Kind, string? Variant, string Value, Dictionary<string, string> Properties, int Line, string? ClassName = null) : Node(Line);
 public sealed record Group(string Name, Dictionary<string, string> Properties, List<Node> Children, int Line) : Node(Line);
 public sealed record Conditional(string Expression, List<Node> Children, List<Node> ElseChildren, int Line) : Node(Line);
 public sealed record SetVariable(string Name, string Value, int Line) : Node(Line);
@@ -18,6 +19,11 @@ public sealed record StateVariable(string Name, string InitialValue, int Line) :
 public sealed record Repeat(string Expression, List<Node> Children, int Line) : Node(Line);
 public sealed record ForEach(string Variable, string Collection, List<Node> Children, int Line) : Node(Line);
 public sealed record ComponentCall(string Name, Dictionary<string, string> Arguments, int Line) : Node(Line);
+public sealed record FunctionReturn(string Expression, int Line) : Node(Line);
+public sealed record TryCatch(List<Node> TryChildren, string ErrorState, List<Node> CatchChildren, int Line) : Node(Line);
+public sealed record ThrowValue(string Message, int Line) : Node(Line);
+public sealed record FunctionDefinition(string Name, List<string> Parameters, string ReturnExpression, int Line);
+public sealed record ImportModule(string Path, int Line) : Node(Line);
 public sealed record ActionOperation(string Name, string Value);
 public sealed record ProgramAst(List<Node> Nodes);
 public sealed record ParseResult(ProgramAst? Program, List<Diagnostic> Diagnostics);
@@ -75,6 +81,8 @@ public sealed class Parser
     private readonly List<(Token Token, string File)> lines;
     private readonly List<Diagnostic> diagnostics;
     private int position;
+    private int functionDepth;
+    private int tryDepth;
     private bool closesWithInlineElse;
 
     private Parser(List<(Token, string)> tokens, List<Diagnostic> diagnostics)
@@ -87,16 +95,19 @@ public sealed class Parser
 
     public static ParseResult ParseAdditionalPage(string text, string file) => ParseCore(text, file, false);
 
+    public static void ResetCatalogs()
+    {
+        StyleCatalog.Reset();
+        ActionCatalog.Reset();
+        ComponentCatalog.Reset();
+        FunctionCatalog.Reset();
+        RuntimeStateCatalog.Reset();
+        WindowCatalog.Reset();
+    }
+
     private static ParseResult ParseCore(string text, string file, bool resetCatalogs)
     {
-        if (resetCatalogs)
-        {
-            StyleCatalog.Reset();
-            ActionCatalog.Reset();
-            ComponentCatalog.Reset();
-            RuntimeStateCatalog.Reset();
-            WindowCatalog.Reset();
-        }
+        if (resetCatalogs) ResetCatalogs();
         var diagnostics = new List<Diagnostic>();
         var parser = new Parser(Lexer.Lines(text, file, diagnostics), diagnostics);
         var nodes = parser.ReadBlock(false);
@@ -137,6 +148,65 @@ public sealed class Parser
             if (Regex.IsMatch(source, @"^window(?:s)?\s*\($", RegexOptions.IgnoreCase))
             {
                 ReadWindowsBlock(file, token);
+                continue;
+            }
+
+            var function = Regex.Match(source, @"^function\s*=\s*([A-Za-z][\w-]*)\s*\(([^)]*)\)\s*\($", RegexOptions.IgnoreCase);
+            if (function.Success)
+            {
+                if (functionDepth > 0) diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Nested function definitions are not supported; define each function at the top level."));
+                var name = function.Groups[1].Value;
+                var parameters = function.Groups[2].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                if (parameters.Any(parameter => !Regex.IsMatch(parameter, @"^[A-Za-z_][\w]*$")) || parameters.Distinct(StringComparer.OrdinalIgnoreCase).Count() != parameters.Count)
+                    diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Function parameters must be unique identifiers separated by commas."));
+                functionDepth++;
+                var body = ReadBlock(true);
+                functionDepth--;
+                var returns = body.OfType<FunctionReturn>().ToArray();
+                if (returns.Length != 1 || body.Count != 1)
+                    diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "A function currently requires exactly one `return = expression` line."));
+                else if (!FunctionCatalog.Definitions.TryAdd(name, new FunctionDefinition(name, parameters, returns[0].Expression, token.Line)))
+                    diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Function '{name}' is already defined."));
+                continue;
+            }
+
+            if (TryAssignment(source, "return", out var returned))
+            {
+                if (functionDepth == 0) diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "`return` can only be used inside a function definition."));
+                else nodes.Add(new FunctionReturn(returned, token.Line));
+                continue;
+            }
+
+            if (Regex.IsMatch(source, @"^try\s*\($", RegexOptions.IgnoreCase))
+            {
+                tryDepth++;
+                var tryChildren = ReadBlock(true);
+                tryDepth--;
+                if (position >= lines.Count || !Regex.IsMatch(lines[position].Token.Value.Trim(), @"^catch\s*=\s*[A-Za-z_][\w]*\s*\($", RegexOptions.IgnoreCase))
+                {
+                    diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "A try block must be followed immediately by `catch = errorState (`."));
+                    nodes.Add(new TryCatch(tryChildren, "error", new List<Node>(), token.Line));
+                    continue;
+                }
+                var catchToken = lines[position++].Token;
+                var catchMatch = Regex.Match(catchToken.Value.Trim(), @"^catch\s*=\s*([A-Za-z_][\w]*)\s*\($", RegexOptions.IgnoreCase);
+                nodes.Add(new TryCatch(tryChildren, catchMatch.Groups[1].Value, ReadBlock(true), token.Line));
+                continue;
+            }
+
+            if (TryAssignment(source, "throw", out var thrown))
+            {
+                if (tryDepth == 0) diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "`throw` can only appear inside a `try (` block."));
+                else nodes.Add(new ThrowValue(thrown, token.Line));
+                continue;
+            }
+
+            if (TryAssignment(source, "import", out var importPath))
+            {
+                importPath = Unquote(importPath);
+                if (Path.IsPathRooted(importPath) || importPath.Contains(':') || !importPath.EndsWith(".txl", StringComparison.OrdinalIgnoreCase) || importPath.Split('/', '\\').Any(part => part is ".." or ""))
+                    diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Module imports must be project-relative `.txl` paths that stay inside the project, such as `modules/helpers.txl`."));
+                else nodes.Add(new ImportModule(importPath, token.Line));
                 continue;
             }
 
@@ -243,7 +313,7 @@ public sealed class Parser
                 continue;
             }
 
-            var element = Regex.Match(source, @"^([A-Za-z][\w-]*)(?:\(([^)]+)\)|\.([A-Za-z][\w-]*))?\s*(?:=\s*(.*))?$");
+            var element = Regex.Match(source, @"^([A-Za-z][\w-]*)(?:\(([^)]+)\)|\.([A-Za-z][\w-]*)(?:\(([^)]+)\))?)?\s*(?:=\s*(.*))?$");
             if (element.Success)
             {
                 var kind = element.Groups[1].Value.ToLowerInvariant();
@@ -254,9 +324,11 @@ public sealed class Parser
                     continue;
                 }
                 var variant = element.Groups[2].Success ? element.Groups[2].Value : element.Groups[3].Success ? element.Groups[3].Value : null;
+                var className = element.Groups[4].Success ? element.Groups[4].Value : null;
+                if (className is null && element.Groups[2].Success && !Regex.IsMatch(variant ?? "", @"^(?:hl|headline|headline[1-5])$", RegexOptions.IgnoreCase)) className = variant;
                 if (kind == "text" && string.Equals(variant, "headline", StringComparison.OrdinalIgnoreCase)) variant = "headline1";
                 if (kind == "text" && variant is not null && Regex.IsMatch(variant, @"^headline[1-5]$", RegexOptions.IgnoreCase)) variant = variant.ToLowerInvariant();
-                var value = element.Groups[4].Success ? Unquote(element.Groups[4].Value) : string.Empty;
+                var value = element.Groups[5].Success ? Unquote(element.Groups[5].Value) : string.Empty;
                 var properties = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 while (position < lines.Count)
                 {
@@ -276,7 +348,7 @@ public sealed class Parser
                 }
                 if (kind == "checkbox" && properties.TryGetValue("checked", out var checkedValue) && !bool.TryParse(checkedValue, out _))
                     diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Checkbox property 'checked' must be true or false."));
-                nodes.Add(new Element(kind, variant, value, properties, token.Line));
+                nodes.Add(new Element(kind, variant, value, properties, token.Line, className));
                 continue;
             }
             diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, $"Cannot parse TXL statement: '{source}'."));
@@ -391,6 +463,7 @@ public sealed class Parser
                 }
                 var operationName = operation.Groups[1].Value;
                 var operationValue = Unquote(operation.Groups[2].Value);
+                CheckProperty(file, operationToken, operationName, operationValue);
                 ActionCatalog.Add(className, eventName, operationName, operationValue);
                 if (eventName == "hover") StyleCatalog.Add("__hover_" + className, operationName, operationValue);
             }
@@ -482,6 +555,8 @@ public sealed class Parser
         }
         if (normalized == "align" && value.ToLowerInvariant() is not ("left" or "center" or "right" or "stretch"))
             diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Alignment must be left, center, right, or stretch."));
+        if (normalized == "cursor" && value.ToLowerInvariant() is not ("pointer" or "hand" or "arrow" or "appstarting" or "cross" or "help" or "text" or "ibeam" or "no" or "sizeall" or "sizenesw" or "sizens" or "sizenwse" or "sizewe" or "up" or "wait" or "none" or "pen" or "scrollall" or "scrolln" or "scrollne" or "scrollns" or "scrollnw" or "scrolls" or "scrollse" or "scrollsw" or "scrollw" or "scrollwe"))
+            diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Cursor must be pointer, hand, arrow, text, wait, cross, help, no, sizeall, a resize cursor, a scroll cursor, up, none, pen, or appstarting."));
         if (normalized == "layout" && value.ToLowerInvariant() is not ("vertical" or "horizontal" or "absolute" or "canvas"))
             diagnostics.Add(new(file, token.Line, token.Column, Severity.Error, "Layout must be vertical, horizontal, or absolute."));
         if (normalized is "border" or "stroke" && !Regex.IsMatch(value, @"^(?:(?:\d+(?:\.\d+)?\s+)?(?:solid\s+)?)?(?:#[0-9a-fA-F]{3,8}|[A-Za-z][A-Za-z0-9 _-]*)$"))
@@ -535,6 +610,87 @@ public static class ComponentCatalog
 {
     public static readonly Dictionary<string, List<Node>> Definitions = new(StringComparer.OrdinalIgnoreCase);
     public static void Reset() => Definitions.Clear();
+}
+
+public static class FunctionCatalog
+{
+    public static readonly Dictionary<string, FunctionDefinition> Definitions = new(StringComparer.OrdinalIgnoreCase);
+    public static void Reset() => Definitions.Clear();
+
+    public static bool TryParseCall(string expression, out string name, out List<string> arguments)
+    {
+        var match = Regex.Match(expression.Trim(), @"^([A-Za-z][\w-]*)\((.*)\)$");
+        name = match.Success ? match.Groups[1].Value : string.Empty;
+        arguments = match.Success ? SplitArguments(match.Groups[2].Value) : new List<string>();
+        return match.Success;
+    }
+
+    public static string InvokeCompileTime(string name, IReadOnlyList<string> arguments, int depth = 0)
+    {
+        if (depth >= 32) throw new InvalidOperationException("TXL function calls exceeded the maximum recursion depth of 32.");
+        if (!Definitions.TryGetValue(name, out var function)) throw new InvalidOperationException($"Unknown TXL function '{name}'.");
+        if (arguments.Count != function.Parameters.Count) throw new InvalidOperationException($"Function '{name}' expects {function.Parameters.Count} argument(s), but received {arguments.Count}.");
+        var scope = function.Parameters.Select((parameter, index) => (parameter, value: arguments[index]))
+            .ToDictionary(pair => pair.parameter, pair => pair.value, StringComparer.OrdinalIgnoreCase);
+        var expanded = Regex.Replace(function.ReturnExpression, @"\$\{([^{}]+)\}", match =>
+        {
+            var expression = match.Groups[1].Value.Trim();
+            if (scope.TryGetValue(expression, out var value)) return value;
+            if (TryParseCall(expression, out var nestedName, out var nestedArguments))
+                return InvokeCompileTime(nestedName, nestedArguments.Select(argument => ResolveArgument(argument, scope, depth + 1)).ToArray(), depth + 1);
+            return string.Empty;
+        });
+        return EvaluateArithmetic(expanded);
+    }
+
+    private static string ResolveArgument(string argument, Dictionary<string, string> scope, int depth)
+    {
+        argument = argument.Trim().Trim('"', '\'');
+        if (scope.TryGetValue(argument, out var value)) return value;
+        if (TryParseCall(argument, out var name, out var arguments))
+            return InvokeCompileTime(name, arguments.Select(item => ResolveArgument(item, scope, depth + 1)).ToArray(), depth + 1);
+        return argument;
+    }
+
+    private static string EvaluateArithmetic(string expression)
+    {
+        var match = Regex.Match(expression.Trim(), @"^(-?(?:\d+(?:\.\d*)?|\.\d+))\s*([+*/-])\s*(-?(?:\d+(?:\.\d*)?|\.\d+))$");
+        if (!match.Success || !double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var left)
+            || !double.TryParse(match.Groups[3].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var right)) return expression;
+        var result = match.Groups[2].Value switch
+        {
+            "+" => left + right,
+            "-" => left - right,
+            "*" => left * right,
+            "/" when right != 0 => left / right,
+            "/" => throw new DivideByZeroException("TXL function divided by zero."),
+            _ => double.NaN
+        };
+        return double.IsFinite(result) ? result.ToString("G", CultureInfo.InvariantCulture) : throw new InvalidOperationException("TXL function returned a non-finite numeric result.");
+    }
+
+    private static List<string> SplitArguments(string input)
+    {
+        var result = new List<string>();
+        var start = 0;
+        var depth = 0;
+        var quote = '\0';
+        for (var index = 0; index < input.Length; index++)
+        {
+            var current = input[index];
+            if (quote != '\0')
+            {
+                if (current == quote && (index == 0 || input[index - 1] != '\\')) quote = '\0';
+                continue;
+            }
+            if (current is '"' or '\'') quote = current;
+            else if (current is '(' or '[' or '{') depth++;
+            else if (current is ')' or ']' or '}') depth--;
+            else if (current == ',' && depth == 0) { result.Add(input[start..index].Trim()); start = index + 1; }
+        }
+        if (start < input.Length || input.Length > 0) result.Add(input[start..].Trim());
+        return result;
+    }
 }
 
 public static class RuntimeStateCatalog

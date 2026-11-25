@@ -2,6 +2,22 @@
 
 Notable changes to TXL are recorded here. Versions follow semantic versioning where practical. The release page contains distributable packages and release-specific installation links.
 
+## [0.9.0-preview.1] — 2026-11-25
+
+### Added
+
+- Recursive project-relative library imports with traversal, symlink, missing-file, and cycle checks; custom functions with parameters, one return expression, bounded recursion, and compile-time/runtime invocation.
+- JSON-backed runtime arrays and objects, plus app-data file read/write/append/delete operations confined to the per-user application data directory.
+- HTTP GET and JSON POST actions using asynchronous I/O, repeating WPF timers, and SQLite query/execute/scalar APIs with bound named parameters and begin/commit/rollback transactions.
+- Runtime action error boundaries that can await a nested operation, catch its exception, and store the message in state; page-construction try/catch/throw remains available.
+- Version-specific isolated updater recovery for the reported Windows `.store\txl.cli` access-denied failure, avoiding deletion or modification of the locked global tool cache.
+
+### Validation and limits
+
+- The solution builds in the Linux sandbox; 50 console regression tests pass; the AllFeatures example passes `txl --check` and cross-publishes as a Windows x64 self-contained application. Its generated WPF runtime includes database parameters/transactions and runtime action error handling.
+- This preview does not expose user-written general-purpose `async`/`await`, arbitrary socket networking, database connection pooling, or background worker threads. TXL functions currently have a single return expression and collection loops/components expand at compile time.
+- GitHub's Windows release workflow must pass before these packages are published. Visual WPF behavior and the exact access-denied condition on the user's Windows machine still require manual Windows verification.
+
 ## [0.8.0] — 2026-11-23
 
 ### Added

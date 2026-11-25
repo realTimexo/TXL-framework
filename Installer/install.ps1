@@ -43,20 +43,48 @@ try {
     $actualDigest = 'sha256:' + (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actualDigest -ne $expectedDigest.ToLowerInvariant()) { throw 'The downloaded TXL package failed its SHA-256 integrity check.' }
     $installed = & dotnet tool list --global 2>$null | Select-String -Pattern '^Txl\.Cli\s'
-    if ($installed) { & dotnet tool update --global Txl.Cli --version $version --add-source $tempFolder --ignore-failed-sources }
-    else { & dotnet tool install --global Txl.Cli --version $version --add-source $tempFolder --ignore-failed-sources }
-    if ($LASTEXITCODE -ne 0) { throw 'The TXL global tool installation failed.' }
+    $selectedToolRoot = $toolRoot
+    if ($installed) {
+        $globalOutput = & dotnet tool update --global Txl.Cli --version $version --add-source $tempFolder --ignore-failed-sources 2>&1
+        $globalUpdateExitCode = $LASTEXITCODE
+        $globalUpdateText = ($globalOutput | Out-String)
+        if ($globalUpdateExitCode -eq 0) {
+            $globalOutput | ForEach-Object { Write-Host $_ }
+        }
+        else {
+            $globalOutput | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+            $hasTlxStorePath = $globalUpdateText -match '(?i)[\\/]\.store[\\/].*txl\.cli'
+            $isLocalizedAccessDenied = ($globalUpdateText -match '(?i)access to the path.{0,500}denied') -or ($globalUpdateText -match '(?i)zugriff auf den pfad.{0,500}(verweigert|nicht zulässig)')
+            if (-not ($hasTlxStorePath -and $isLocalizedAccessDenied)) {
+                throw "The global TXL update failed for a reason other than the known .NET tool-store access-denied issue. No isolated fallback was attempted. $globalUpdateText"
+            }
+            Write-Host 'The existing global TXL package is locked or inaccessible. Installing into a fresh versioned per-user TXL folder instead.' -ForegroundColor Yellow
+            $selectedToolRoot = Join-Path $env:USERPROFILE ".txl\tools\$version"
+            New-Item -ItemType Directory -Force -Path $selectedToolRoot | Out-Null
+            & dotnet tool install Txl.Cli --tool-path $selectedToolRoot --version $version --add-source $tempFolder --ignore-failed-sources
+            if ($LASTEXITCODE -ne 0) { throw 'The old global package could not be updated, and the isolated per-user TXL install also failed.' }
+        }
+    }
+    else {
+        & dotnet tool install --global Txl.Cli --version $version --add-source $tempFolder --ignore-failed-sources
+        if ($LASTEXITCODE -ne 0) { throw 'The TXL global tool installation failed.' }
+    }
 } finally {
     Remove-Item -LiteralPath $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-$pathEntries = @($userPath -split ';' | Where-Object { $_ })
-foreach ($entry in @($installRoot, $toolRoot)) {
-    if (-not ($pathEntries | Where-Object { $_.TrimEnd('\') -ieq $entry.TrimEnd('\') })) { $pathEntries += $entry }
+try {
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $pathEntries = @($userPath -split ';' | Where-Object { $_ -and $_.TrimEnd('\') -ine $selectedToolRoot.TrimEnd('\') })
+    $pathEntries = @($selectedToolRoot) + $pathEntries
+    foreach ($entry in @($installRoot, $toolRoot)) {
+        if (-not ($pathEntries | Where-Object { $_.TrimEnd('\') -ieq $entry.TrimEnd('\') })) { $pathEntries += $entry }
+    }
+    [Environment]::SetEnvironmentVariable('Path', ($pathEntries -join ';'), 'User')
+} catch {
+    Write-Warning "TXL $version is installed in '$selectedToolRoot', but the user PATH could not be saved. Add that folder to PATH manually. $($_.Exception.Message)"
 }
-[Environment]::SetEnvironmentVariable('Path', ($pathEntries -join ';'), 'User')
-Write-Host "TXL $version is installed as a per-user .NET global tool." -ForegroundColor Green
+Write-Host "TXL $version is installed for the current Windows user in '$selectedToolRoot'." -ForegroundColor Green
 Write-Host 'Open a new terminal, change to a TXL project folder, then run: txl --build'
 Write-Host 'Update later with: txl --update'
 Write-Host 'Other commands: txl --check, txl --version, and txl --help'

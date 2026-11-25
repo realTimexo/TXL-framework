@@ -58,7 +58,22 @@ The repository's `global.json` pins SDK `9.0.200` with a .NET 9 feature-band rol
 
 ## Troubleshooting
 
-- If PowerShell says `txl` is not recognized, open a new terminal and check that `%USERPROFILE%\.dotnet\tools` is on your user PATH. Restart VS Code after installing if its terminal cannot find the command.
+- If `txl --update` fails with `Access to the path ...\.dotnet\tools\.store\txl.cli\0.7.0 is denied`, close TXL/VS Code terminals and use the clean per-user tool path below. It avoids deleting the locked old package. This is a workaround for already-installed updater versions; the improved updater will perform this fallback automatically once installed.
+
+  ```powershell
+  $package = Join-Path $env:TEMP 'Txl.Cli.0.8.0.nupkg'
+  Invoke-WebRequest 'https://github.com/realTimexo/TXL-framework/releases/download/v0.8.0/Txl.Cli.0.8.0.nupkg' -OutFile $package
+  $tools = Join-Path $env:USERPROFILE '.txl\tools\0.8.0'
+  New-Item -ItemType Directory -Force -Path $tools | Out-Null
+  dotnet tool install --tool-path $tools Txl.Cli --version 0.8.0 --add-source $env:TEMP --ignore-failed-sources
+  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+  $entries = @($tools) + @($userPath -split ';' | Where-Object { $_ -and $_.TrimEnd('\\') -ine $tools.TrimEnd('\\') })
+  [Environment]::SetEnvironmentVariable('Path', ($entries -join ';'), 'User')
+  & (Join-Path $tools 'txl.exe') --version
+  ```
+
+  Open a new terminal after that command; `txl --version` should report `0.8.0`. Do not delete the `.store` folder while TXL, VS Code, or another `dotnet` process may still be using it.
+- If PowerShell says `txl` is not recognized, open a new terminal and check that `%USERPROFILE%\.dotnet\tools` (or the isolated `%USERPROFILE%\.txl\tools` recovery path above) is on your user PATH. Restart VS Code after installing if its terminal cannot find the command.
 - If the installer says a GitHub release or `Txl.Cli.<version>.nupkg` is missing, the release has not yet been published or the package asset was omitted. Use the latest release page at `https://github.com/realTimexo/TXL-framework/releases`.
 - If the SDK cannot be found, run `dotnet --list-sdks`. Building requires a .NET 9 SDK; downloading only the runtime is not enough.
 - If package restore or a Windows Desktop reference fails, connect to the internet and run `txl --build` again.

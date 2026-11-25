@@ -113,35 +113,32 @@ internal static class CliUpdater
             }
 
             Console.WriteLine($"Downloading TXL {version} from its official GitHub release...");
-            var update = new ProcessStartInfo("dotnet")
-            {
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-            foreach (var argument in new[]
+            var result = await RunDotnetToolAsync(new[]
             {
                 "tool", "update", "--global", "Txl.Cli", "--version", version,
                 "--add-source", temporaryFolder, "--ignore-failed-sources"
-            }) update.ArgumentList.Add(argument);
-
-            using var process = Process.Start(update);
-            if (process is null)
+            });
+            Console.Write(result.Output);
+            if (!string.IsNullOrWhiteSpace(result.Error)) Console.Error.Write(result.Error);
+            var updateOutput = result.Output + Environment.NewLine + result.Error;
+            if (result.ExitCode != 0 && UpdateRecovery.IsWindowsToolStoreAccessDenied(updateOutput, OperatingSystem.IsWindows()))
             {
-                Console.Error.WriteLine("Could not start dotnet. Confirm the .NET SDK is installed and dotnet is on PATH.");
-                return 1;
+                Console.Error.WriteLine("The old TXL package is blocked in the .NET global tool cache. Installing the verified update into a separate per-user TXL folder instead...");
+                var fallback = await InstallIsolatedWindowsToolAsync(version, temporaryFolder);
+                Console.Write(fallback.Output);
+                if (!string.IsNullOrWhiteSpace(fallback.Error)) Console.Error.Write(fallback.Error);
+                if (fallback.ExitCode != 0)
+                {
+                    Console.Error.WriteLine("Automatic recovery could not install the separate TXL tool. Close TXL/VS Code and retry. If Windows still denies access, repair permissions for the old package cache and rerun 'txl --update'.");
+                    return fallback.ExitCode;
+                }
+                Console.WriteLine($"TXL {version} was installed to a clean per-user tool folder. Close and reopen your terminal, then run 'txl --version'.");
+                return 0;
             }
-
-            var standardOutput = process.StandardOutput.ReadToEndAsync();
-            var standardError = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-            Console.Write(await standardOutput);
-            var errorText = await standardError;
-            if (!string.IsNullOrWhiteSpace(errorText)) Console.Error.Write(errorText);
-            if (process.ExitCode != 0)
+            if (result.ExitCode != 0)
             {
                 Console.Error.WriteLine("TXL could not update the global tool. If it is not installed yet, run the official Windows installer from the repository README.");
-                return process.ExitCode;
+                return result.ExitCode;
             }
 
             Console.WriteLine($"TXL updated to {version}. Run 'txl --version' to verify.");
@@ -157,6 +154,66 @@ internal static class CliUpdater
         {
             if (Directory.Exists(temporaryFolder))
                 Directory.Delete(temporaryFolder, recursive: true);
+        }
+    }
+
+    private static async Task<(int ExitCode, string Output, string Error)> RunDotnetToolAsync(IEnumerable<string> arguments)
+    {
+        var start = new ProcessStartInfo("dotnet")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+        using var process = Process.Start(start);
+        if (process is null) throw new System.ComponentModel.Win32Exception("Could not start dotnet. Confirm the .NET SDK is installed and dotnet is on PATH.");
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        return (process.ExitCode, await stdout, await stderr);
+    }
+
+    private static async Task<(int ExitCode, string Output, string Error)> InstallIsolatedWindowsToolAsync(string version, string packageSource)
+    {
+        // Never mutate the locked .NET global cache or a possibly-running isolated shim.
+        // Each verified release gets a fresh directory, so install is deterministic and safe.
+        var toolPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".txl", "tools", version);
+        Directory.CreateDirectory(toolPath);
+        var result = await RunDotnetToolAsync(new[]
+        {
+            "tool", "install", "Txl.Cli", "--tool-path", toolPath, "--version", version,
+            "--add-source", packageSource, "--ignore-failed-sources"
+        });
+        if (result.ExitCode != 0) return result;
+
+        try
+        {
+            var current = Environment.GetEnvironmentVariable("Path", EnvironmentVariableTarget.User) ?? string.Empty;
+            var entries = current.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(entry => !PathEquals(entry, toolPath))
+                .Prepend(toolPath);
+            Environment.SetEnvironmentVariable("Path", string.Join(Path.PathSeparator, entries), EnvironmentVariableTarget.User);
+            return result;
+        }
+        catch (Exception error) when (error is ArgumentException or System.Security.SecurityException or IOException)
+        {
+            return (result.ExitCode, result.Output,
+                result.Error + $"The update is installed in '{toolPath}', but TXL could not persist your user PATH ({error.Message}). Add that folder to your PATH, then reopen the terminal.");
+        }
+    }
+
+    private static bool PathEquals(string entry, string expected)
+    {
+        try
+        {
+            var expanded = Environment.ExpandEnvironmentVariables(entry);
+            return Path.GetFullPath(expanded).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Equals(Path.GetFullPath(expected).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or System.Security.SecurityException or IOException)
+        {
+            return string.Equals(entry.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), expected.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -29,13 +29,17 @@ var validation = ProjectValidator.Validate(project);
 if (!PrintDiagnostics(validation.Diagnostics, project)) return 1;
 var info = validation.Info!;
 var source = Path.Combine(project, info.Start);
-var parsed = Parser.Parse(File.ReadAllText(source), info.Start.Replace('\\', '/'));
+Parser.ResetCatalogs();
+var moduleDiagnostics = ModuleLoader.LoadImports(project, info.Start, out var importedModules);
+if (!PrintDiagnostics(moduleDiagnostics, project)) return 1;
+var parsed = Parser.ParseAdditionalPage(File.ReadAllText(source), info.Start.Replace('\\', '/'));
 var pagePrograms = new Dictionary<string, ProgramAst>(StringComparer.OrdinalIgnoreCase) { [info.Start.Replace('\\', '/')] = parsed.Program ?? new ProgramAst(new List<Node>()) };
 var pageDiagnostics = new List<Diagnostic>(parsed.Diagnostics);
 foreach (var pageFile in Directory.GetFiles(project, "*.txl", SearchOption.AllDirectories).Where(file => !Path.GetRelativePath(project, file).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part => part is "dist" or ".txl-generated" or ".git" or "bin" or "obj")))
 {
     var relative = Path.GetRelativePath(project, pageFile).Replace('\\', '/');
     if (relative.Equals(info.Start.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)) continue;
+    if (importedModules.Contains(relative)) continue;
     var page = Parser.ParseAdditionalPage(File.ReadAllText(pageFile), relative);
     pageDiagnostics.AddRange(page.Diagnostics);
     if (page.Program is not null) pagePrograms[relative] = page.Program;

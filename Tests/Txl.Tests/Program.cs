@@ -8,6 +8,14 @@ void Test(string name, Action action)
     catch (Exception e) { Console.Error.WriteLine($"FAIL {name}: {e.Message}"); failed++; }
 }
 
+Test("updater recognizes denied Windows TXL tool-store deletion and rejects unrelated errors", () =>
+{
+    const string english = "Failed to uninstall tool package 'txl.cli': Access to the path 'C:\\Users\\Mobile\\.dotnet\\tools\\.store\\txl.cli\\0.7.0' is denied.";
+    const string german = "Fehler beim Deinstallieren des Toolpakets 'txl.cli': Der Zugriff auf den Pfad 'C:\\Users\\Mobile\\.dotnet\\tools\\.store\\txl.cli\\0.7.0' wurde verweigert.";
+    if (!UpdateRecovery.IsWindowsToolStoreAccessDenied(english, true) || !UpdateRecovery.IsWindowsToolStoreAccessDenied(german, true)) throw new Exception("expected localized access-denied cache error was not recognized");
+    if (UpdateRecovery.IsWindowsToolStoreAccessDenied("HTTP 404 from releases API", true) || UpdateRecovery.IsWindowsToolStoreAccessDenied(english, false)) throw new Exception("unrelated or non-Windows failure incorrectly triggered recovery");
+});
+
 Test("colon style and group blocks", () =>
 {
     var source = "style (\nmain:\nbackground = #20202A\ncolor = white\n)\ngroup = header (\ntext(hl) = Welcome\n)";
@@ -64,7 +72,7 @@ Test("todo list emits persistent completion and removal controls", () =>
     var parsed = Parser.Parse("state = tasks:[]\ninput = New task\nstate = task:\nlist = tasks\nbutton = Add\naction = listAdd(tasks,task)");
     if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
     var output = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
-    if (!output.Contains("RenderTodo") || !output.Contains("ChangeTodo") || !output.Contains("Remove") || !output.Contains("listadd") || !output.Contains("SetState(key,JsonSerializer.Serialize(items))")) throw new Exception("todo add/check/remove persistence path missing");
+    if (!output.Contains("RenderTodo") || !output.Contains("ChangeTodo") || !output.Contains("Remove") || !output.Contains("Add task") || !output.Contains("AddTodoItem(key,editor)") || !output.Contains("listadd") || !output.Contains("SetState(key,JsonSerializer.Serialize(items))")) throw new Exception("ready-to-use persistent todo add/check/remove path missing");
 });
 Test("input text is placeholder and explicit value is initial content", () =>
 {
@@ -101,8 +109,139 @@ Test("class click and hover actions parse", () =>
         throw new Exception(string.Join(";", result.Diagnostics));
     var input = Parser.Parse("actions (\nfield(hover):\ncolor = red\n)\ninput(field) = Search");
     var output = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), input.Program!, ".");
-    if (!output.Contains("hoverTarget=element is Grid inputGrid&&inputGrid.Tag is TextBox wrappedInput?wrappedInput:element")) throw new Exception("input hover style does not target the wrapped TextBox");
+    if (!output.Contains("FrameworkElement target=element is Grid inputGrid&&inputGrid.Tag is TextBox wrappedInput?wrappedInput:element")) throw new Exception("input hover style does not target the wrapped TextBox");
 });
+Test("dotted headings retain both heading level and class", () =>
+{
+    var parsed = Parser.Parse("text.headline3(projectsTxt) = Andere Projekte");
+    if (parsed.Program?.Nodes[0] is not Element { Kind: "text", Variant: "headline3", ClassName: "projectsTxt", Value: "Andere Projekte" }) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("MakeElement(\"text\",\"headline3\",\"projectsTxt\"")) throw new Exception("the emitted control lost its independent class name");
+});
+Test("type-level hover and click actions resolve by control kind", () =>
+{
+    var parsed = Parser.Parse("actions (\nbutton(hover):\nbackground = #2b2b2b\ncursor = pointer\nbutton(click):\nopen = https://example.com\n)\nbutton = Open");
+    if (parsed.Program is null || !ActionCatalog.Actions.ContainsKey("button.click")) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("ApplyClassEvents(element,className,kind)") || !emitted.Contains("CursorFor(cursor)") || !emitted.Contains("Cursors.Hand") || !emitted.Contains("button.click")) throw new Exception("type action or cursor runtime wiring missing");
+    if (!emitted.Contains("\"up\"=>Cursors.UpArrow")) throw new Exception("the valid up cursor did not map to WPF's UpArrow");
+});
+Test("unsupported cursor names receive a useful diagnostic", () =>
+{
+    var parsed = Parser.Parse("style (\nbutton:\ncursor = banana\n)\nbutton = Invalid");
+    if (!parsed.Diagnostics.Any(d => d.Message.Contains("Cursor must"))) throw new Exception("invalid cursor value was accepted without guidance");
+});
+
+Test("functions accept parameters, return values, and run at compile time and in actions", () =>
+{
+    var source = "function = add(a,b) (\nreturn = ${a} + ${b}\n)\nset = total:add(5,7)\nstate = runtimeTotal:0\nactions (\ncalculate(click):\ncall = add,8,9,runtimeTotal\n)\nbutton(calculate) = Calculate\ntext = ${total}";
+    var parsed = Parser.Parse(source);
+    if (parsed.Program is null || FunctionCatalog.Definitions.Count != 1) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("12") || !emitted.Contains("CallFunction(A(0),functionArgs)") || !emitted.Contains("case \"add\"")) throw new Exception("compile-time or runtime function call path missing");
+    if (FunctionCatalog.InvokeCompileTime("add", new[] { "11", "4" }) != "15") throw new Exception("function argument binding/math failed");
+});
+
+Test("runtime actions preserve multiple arguments and provide JSON array/object operations", () =>
+{
+    var source = """
+state = items:[]
+state = profile:{}
+state = selected:
+actions (
+add(click):
+arrayAdd = items, "Ada, Lovelace"
+objectSet = profile,name,"Ada, Lovelace"
+arrayGet = items,0,selected
+objectGet = profile,name,selected
+fileWrite = notes.txt,Hello
+fileRead = notes.txt,selected
+fileAppend = notes.txt," world"
+fileDelete = notes.txt
+httpGet = https://example.com/data,result
+httpPost = https://example.com/data,body,result
+timerStart = clock,1000,ticks,increment
+timerStop = clock
+dbExecute = app.db,CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT)
+dbQuery = app.db,SELECT * FROM items,rows
+dbScalar = app.db,SELECT COUNT(*) FROM items,count
+dbExecute = app.db,"INSERT INTO items(name) VALUES ($name)",name,personName
+dbBegin = app.db
+dbCommit = app.db
+dbRollback = app.db
+)
+button(add) = Update
+""";
+    var parsed = Parser.Parse(source);
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var output = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    foreach (var fragment in new[] { "Action(name+\"(\"+value+\")\")", "ActionArgs(string body)", "as JsonArray", "as JsonObject", "case \"arrayadd\"", "case \"objectset\"", "DataValue(A(1))", "ResolveDataFile(string relative)", "File.WriteAllText(path", "File.AppendAllText(path", "File.ReadAllText(path)", "File.Delete(path)", "cannot follow symbolic links", "case \"filewrite\":case \"fileappend\"", "case \"timerstart\":case \"timerstop\"", "case \"dbexecute\":case \"dbquery\"", "async void Action(string action)", "async Task ExecuteAction(string action)", "await ExecuteAction(A(0))", "await httpClient.GetAsync(endpoint)", "await httpClient.PostAsync(endpoint,body)", "EnsureSuccessStatusCode()", "DispatcherTimer", "timerStart interval must be 50", "SetState(state,(current+1)", "Microsoft.Data.Sqlite", "SqliteConnection", "case \"dbquery\"", "Database parameters must be name,value pairs", "command.Parameters.Add(parameter)", "parameter.ParameterName=\"$\"+parameterName", "databaseTransactions", "BeginTransaction()", "active.Transaction.Commit()", "active.Transaction.Rollback()", "ExecuteReader()", "ExecuteScalar()" })
+        if (!output.Contains(fragment)) throw new Exception("generated runtime is missing: " + fragment);
+    if (!output.Contains("void ExecuteOperations(JsonElement operations,bool skipKey=false){foreach(var op in operations.EnumerateArray()){var name=op.GetProperty(\"Name\").GetString()??\"\";if(skipKey&&name.Equals(\"key\",StringComparison.OrdinalIgnoreCase))continue;var value=op.GetProperty(\"Value\").GetString()??\"\";Action(name+\"(\"+value+\")\");}}") || output.Contains("if(name.StartsWith(\"db\",StringComparison.OrdinalIgnoreCase))DatabaseOperation")) throw new Exception("element actions must use the common protected async action dispatcher");
+});
+
+Test("try/catch stores a thrown message and renders the catch branch", () =>
+{
+    var parsed = Parser.Parse("state = error:\ntry (\nthrow = Something went wrong\ntext = This is skipped\n)\ncatch = error (\ntext = Recovery UI\n)");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var output = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!output.Contains("try{throw new InvalidOperationException(\"Something went wrong\")") || !output.Contains("SetState(\"error\",__txlError_") || !output.Contains("Recovery UI")) throw new Exception("runtime try/catch code was not emitted");
+    var outside = Parser.Parse("throw = Not allowed");
+    if (!outside.Diagnostics.Any(d => d.Message.Contains("only appear inside a `try"))) throw new Exception("throw outside try was not diagnosed");
+    var missingCatch = Parser.Parse("try (\ntext = no\n)");
+    if (!missingCatch.Diagnostics.Any(d => d.Message.Contains("must be followed immediately"))) throw new Exception("try without catch was accepted");
+});
+
+Test("runtime action try/catch awaits HTTP and catches thrown action errors", () =>
+{
+    var parsed = Parser.Parse("state = response:\nstate = error:\nbutton = Request\naction = try(httpGet(https://example.org/api,response),error)\nbutton = Test throw\naction = try(throw(Test failure),error)");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var output = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!output.Contains("async Task ExecuteAction(string action)") || !output.Contains("await ExecuteAction(A(0))") || !output.Contains("case \"throw\":throw new InvalidOperationException") || !output.Contains("SetState(A(1),error.Message)")) throw new Exception("runtime action-level exception boundary was not generated");
+});
+
+Test("project-relative modules load functions before the entry page is parsed", () =>
+{
+    var directory = TempProject("1.0.0", "main.txl");
+    try
+    {
+        Directory.CreateDirectory(Path.Combine(directory, "modules"));
+        File.WriteAllText(Path.Combine(directory, "modules", "math.txl"), "function = double(value) (\nreturn = ${value} * 2\n)\n");
+        const string source = "import = modules/math.txl\nset = total:double(21)\ntext = ${total}\n";
+        File.WriteAllText(Path.Combine(directory, "main.txl"), source);
+        Parser.ResetCatalogs();
+        var moduleDiagnostics = ModuleLoader.LoadImports(directory, "main.txl");
+        if (moduleDiagnostics.Any(d => d.Severity == Severity.Error)) throw new Exception(string.Join(";", moduleDiagnostics));
+        var parsed = Parser.ParseAdditionalPage(source, "main.txl");
+        if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+        var output = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, directory);
+        if (!output.Contains("42") || !output.Contains("case \"double\"")) throw new Exception("the imported function was not available to the entry page");
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
+Test("module loader rejects project-root traversal and detects import cycles", () =>
+{
+    var directory = TempProject("1.0.0", "main.txl");
+    try
+    {
+        var traversal = ModuleLoader.LoadImports(directory, "../outside.txl");
+        if (!traversal.Any(d => d.Severity == Severity.Error && d.Message.Contains("project-relative"))) throw new Exception("project traversal was not rejected");
+        var absolute = ModuleLoader.LoadImports(directory, "/outside.txl");
+        if (!absolute.Any(d => d.Severity == Severity.Error && d.Message.Contains("project-relative"))) throw new Exception("absolute import was not rejected");
+        Directory.CreateDirectory(Path.Combine(directory, "modules"));
+        File.WriteAllText(Path.Combine(directory, "modules", "a.txl"), "import = modules/b.txl\n");
+        File.WriteAllText(Path.Combine(directory, "modules", "b.txl"), "import = modules/a.txl\n");
+        File.WriteAllText(Path.Combine(directory, "main.txl"), "import = modules/a.txl\ntext = ok\n");
+        Parser.ResetCatalogs();
+        var cyclic = ModuleLoader.LoadImports(directory, "main.txl");
+        if (!cyclic.Any(d => d.Severity == Severity.Error && d.Message.Contains("cycle", StringComparison.OrdinalIgnoreCase))) throw new Exception("module cycle was not detected");
+        var badSyntax = Parser.Parse("import = C:/outside.txl\ntext = no");
+        if (!badSyntax.Diagnostics.Any(d => d.Severity == Severity.Error && d.Message.Contains("project-relative"))) throw new Exception("drive-qualified import was not rejected");
+    }
+    finally { Directory.Delete(directory, true); }
+});
+
 Test("variables, conditions, interpolation and repeats render", () =>
 {
     var source = "set = enabled:true\nset = title:Hello\nif = enabled == true (\ntext = ${title}\n)\nif = false (\ntext = hidden\n)\nrepeat = 3 (\ntext = item-${index}\n)";
@@ -194,7 +333,7 @@ Test("keydown class action filters keys and can execute runtime actions", () =>
     var parsed = Parser.Parse("actions (\nsearch(keydown):\nkey = Enter\nset = result,submitted\n)\ninput(search) = Search\nstate = result:");
     if (parsed.Program is null || ActionCatalog.Actions["search.keydown"].Count != 2) throw new Exception(string.Join(";", parsed.Diagnostics));
     var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
-    if (!emitted.Contains("ApplyKeyboardEvents(element,variant)") || !emitted.Contains("Enum.TryParse<Key>")) throw new Exception("keyboard key event was not wired to the class");
+    if (!emitted.Contains("ApplyKeyboardEvents(element,className,kind)") || !emitted.Contains("Enum.TryParse<Key>")) throw new Exception("keyboard key event was not wired to the class");
 });
 Test("position syntax and video flags receive actionable diagnostics", () =>
 {
@@ -239,8 +378,16 @@ Test("HTML and embed aliases generate a WPF browser with safe URL handling", () 
     var parsed = Parser.Parse("embed = \"<h1>TXL</h1>\"\nhtml = https://example.com/embed.html");
     if (parsed.Program?.Nodes is not [Element { Kind: "html", Value: var inline }, Element { Kind: "html", Value: var remote }] || inline != "<h1>TXL</h1>" || remote != "https://example.com/embed.html") throw new Exception(string.Join(";", parsed.Diagnostics));
     var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
-    if (!emitted.Contains("WebBrowser MakeHtml") || !emitted.Contains("NavigateToString(source)") || !emitted.Contains("Embedded HTML URLs must use HTTP or HTTPS")) throw new Exception("HTML rendering/security path missing");
+    if (!emitted.Contains("FrameworkElement MakeHtml") || !emitted.Contains("NavigateToString(source)") || !emitted.Contains("Embedded HTML URLs must use HTTP or HTTPS") || !emitted.Contains("YoutubeFallback")) throw new Exception("HTML rendering/security or YouTube fallback path missing");
 });
+Test("YouTube iframe content avoids the legacy IE script error and offers an external-browser link", () =>
+{
+    var parsed = Parser.Parse("html = \"<iframe src='https://www.youtube.com/embed/BSKHG42t89Q'></iframe>\"");
+    if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
+    var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
+    if (!emitted.Contains("youtube(?:-nocookie)?\\.com") || !emitted.Contains("Open video in browser") || !emitted.Contains("UseShellExecute=true")) throw new Exception("YouTube embed fallback was not emitted");
+});
+
 Test("mailto is accepted by the safe open action", () =>
 {
     var parsed = Parser.Parse("actions (\ncontact(click):\nopen = mailto:hello@example.com\n)\nbutton(contact) = Email");

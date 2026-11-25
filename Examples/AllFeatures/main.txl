@@ -4,6 +4,9 @@
 # Gradients, theme switching, loading overlays, custom modal forms, live editor inspection,
 # and hot reload are not implemented yet.
 
+import = modules/text.txl
+set = welcomeText:welcome(Ada)
+
 window (
   title: TXL All Features
   icon: assets/app.ico
@@ -104,6 +107,13 @@ state = personName:
 state = rememberPreference:false
 state = counter:0
 state = note:
+state = names:["Ada"]
+state = profile:{}
+state = savedText:
+state = apiResponse:
+state = timerTicks:0
+state = databaseResult:
+state = databaseName:Grace
 
 # Header, styles, and reusable components.
 group = header (
@@ -269,4 +279,60 @@ group = section (
   action = open(https://example.com)
   button(businessPage) = Open the compiled business page
   button(contact) = Email the author
+)
+
+# Custom compile-time function imported from a library module.
+group = section (
+  layout = vertical
+  text.headline = 9. Functions, modules, collections, and local files
+  text = Imported function output: ${welcomeText}
+  button = Add Grace to names
+  action = arrayAdd(names,Grace)
+  button = Save profile name
+  action = objectSet(profile,name,Ada)
+  button = Read profile name
+  action = objectGet(profile,name,note)
+  text = Profile name:
+  text = No name saved
+  bind = note
+  button = Save a local note
+  action = fileWrite(notes.txt,Hello from TXL)
+  button = Read the local note
+  action = fileRead(notes.txt,savedText)
+  text = Saved note:
+  text = Nothing read yet
+  bind = savedText
+)
+
+# Network, timer, and SQLite calls only run when their buttons are clicked.
+group = section (
+  layout = vertical
+  text.headline = 10. HTTP, timers, and SQLite
+  button = Request example JSON
+  action = httpGet(https://httpbin.org/json,apiResponse)
+  text = HTTP response:
+  text = Click the request button
+  bind = apiResponse
+  button = Start 1-second timer
+  action = timerStart(demoClock,1000,timerTicks,increment)
+  button = Stop timer
+  action = timerStop(demoClock)
+  text = Timer ticks:
+  text = 0
+  bind = timerTicks
+  button = Create SQLite demo table
+  action = dbExecute(app.db,CREATE TABLE IF NOT EXISTS demo (id INTEGER PRIMARY KEY, name TEXT))
+  button = Begin SQLite transaction
+  action = dbBegin(app.db)
+  button = Insert name in current transaction
+  action = dbExecute(app.db,"INSERT INTO demo(name) VALUES ($name)",name,databaseName)
+  button = Commit transaction
+  action = dbCommit(app.db)
+  button = Roll back transaction
+  action = dbRollback(app.db)
+  button = Count SQLite rows
+  action = dbScalar(app.db,SELECT COUNT(*) FROM demo,databaseResult)
+  text = Database result:
+  text = Click Count SQLite rows
+  bind = databaseResult
 )
