@@ -12,7 +12,7 @@ Notable changes to TXL are recorded here. Versions follow semantic versioning wh
 
 ### Validation
 
-- Release validation is in progress for this preview. WPF playback and rendering still need visual testing on Windows with the WebView2 Runtime installed.
+- GitHub's Windows release workflow passed: tag/version validation, the 50-test harness, CLI package, VSIX, self-contained AllFeatures and PageNavigation apps, and source archives all succeeded. WPF rendering and actual YouTube playback still need visual testing on Windows with the WebView2 Runtime installed.
 
 ## [0.9.0-preview.1] — 2026-11-25
 
