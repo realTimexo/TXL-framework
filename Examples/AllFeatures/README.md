@@ -15,4 +15,4 @@ To publish the Windows x64 executable, use `dotnet run --project .\Compiler\Txl.
 
 ## Limits
 
-WPF layout is not responsive. HTML uses the Windows WPF WebBrowser control, not a modern browser engine; only embed trusted content. Videos depend on Windows codecs. Gradients, dark/light theme switching, custom modal forms, loading overlays, reactive iteration, embedded live-preview diagnostics, component inspection, and hot reload are not included. Compile-time loops and components are not runtime-reactive. See [the grammar guide](../../Documentation/GRAMMAR.md) for syntax and current limits.
+WPF layout is not responsive. HTML uses Microsoft Edge WebView2 for modern browser rendering; the WebView2 Runtime must be installed, and only embed trusted content. YouTube iframe embeds require network access. Videos depend on Windows codecs. Gradients, dark/light theme switching, custom modal forms, loading overlays, reactive iteration, embedded live-preview diagnostics, component inspection, and hot reload are not included. Compile-time loops and components are not runtime-reactive. See [the grammar guide](../../Documentation/GRAMMAR.md) for syntax and current limits.

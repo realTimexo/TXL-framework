@@ -1,0 +1,7 @@
+{
+  "name": "TXL Page Navigation Demo",
+  "version": "1.0.0",
+  "developer": "TXL",
+  "description": "A minimal example: main.txl starts; test.txl opens only when its button is clicked.",
+  "start": "main.txl"
+}

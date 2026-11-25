@@ -127,7 +127,7 @@ height = 270
 
 ## HTML embedding
 
-Use `html =` or its `embed =` alias with a single-line HTML string, a project-relative `.html` file, or an HTTP(S) URL. Project files are copied into the app content folder. The runtime uses WPF `WebBrowser`; its rendering capabilities depend on the Windows web engine and it is not a modern browser runtime. Treat embedded HTML and remote pages as trusted content. Remote embedding requires network access and only HTTP(S) schemes are accepted.
+Use `html =` or its `embed =` alias with a single-line HTML string, a project-relative `.html` file, or an HTTP(S) URL. Project files are copied into the app content folder. Generated apps use Microsoft Edge WebView2 (Chromium), so inline HTML, scripts, CSS, remote pages, and YouTube iframe embeds use a modern engine instead of the legacy WPF WebBrowser control. The Microsoft Edge WebView2 Runtime must be installed; Windows 11 includes it, while some Windows 10 devices may need the [Evergreen Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) installed. If it is missing, the app displays an install link rather than a script-error dialog. Treat embedded HTML and remote pages as trusted content because page JavaScript runs with the app user's network access. Remote embedding accepts only HTTP(S). VS Code syntax highlighting embeds its HTML grammar inside quoted `html = "..."` and `embed = "..."` values.
 
 ```txl
 embed = "<h2>Welcome</h2><p>Embedded markup</p>"
@@ -233,7 +233,7 @@ The current keyboard event set is a simple WPF key-down event with an optional k
 - `for = item in collection (` expands a compile-time list. `repeat = N (` expands at most 1,000 times and provides zero-based `${index}`.
 - Calculator math supports `math(add|subtract|multiply|divide,left,right,result)` and writes a readable result for invalid input or division by zero.
 - `open = https://example.org` opens HTTP(S) links; `open = mailto:hello@example.org` launches the system mail handler. Other URI schemes are ignored.
-- `page = business.txl` or `page(business.txl)` navigates to another `.txl` file compiled from within the project. Paths are normalized and traversal is rejected; all project `.txl` files are parsed at build/check time, and Back returns to the previous compiled page.
+- `page = business.txl` or `page(business.txl)` navigates to another `.txl` file compiled from within the project. The `info.json` `start` file is the only view shown at launch; other root or nested `.txl` files are compiled as routes and do not render until a page action runs. For example, put `button = Open test page` followed by `action = page(test.txl)` in `main.txl`, set `"start":"main.txl"` in `info.json`, and put the destination UI in `test.txl`. Paths are normalized and traversal is rejected; Back returns to the previous compiled page.
 
 These are intentionally small compile-time and runtime features, not a reactive application framework.
 

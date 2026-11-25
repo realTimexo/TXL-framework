@@ -34,7 +34,7 @@ txl --build
 
 If you already have TXL v0.6.0 or earlier, rerun the installer command above once: older CLI versions do not recognize `txl --update`. After that one-time update to v0.7.0, use `txl --update` for later releases.
 
-Pass a project path when you are elsewhere: `txl --build C:\Projects\MyApp`. The app is written to `dist\<AppName>\<AppName>.exe`. If the app uses images or videos, distribute that entire output folder, including `content`. The compiler needs the .NET 9 SDK to build; the generated app is self-contained and does not need TXL installed on the target PC.
+Pass a project path when you are elsewhere: `txl --build C:\Projects\MyApp`. The app is written to `dist\<AppName>\<AppName>.exe`. If the app uses images or videos, distribute that entire output folder, including `content`. The compiler needs the .NET 9 SDK to build; the generated app is self-contained and does not need TXL installed on the target PC. Apps that use `html`/`embed` also need the Microsoft Edge WebView2 Runtime; it is included with Windows 11, and the app shows an install link if it is missing.
 
 The installer downloads the latest compiler package from [GitHub Releases](https://github.com/realTimexo/TXL-framework/releases). The CLI and installer require a published release package; see [Releases and versioning](#releases-and-versioning) for the release process.
 
@@ -79,9 +79,10 @@ An input's assigned text is its placeholder; it is not submitted until the user 
 - [`Examples/Starter`](Examples/Starter) — a small starter layout.
 - [`Examples/Calculator`](Examples/Calculator) — add, subtract, multiply, and divide with bound runtime state.
 - [`Examples/TodoList`](Examples/TodoList) — add, check, remove, and persist tasks locally.
+- [`Examples/PageNavigation`](Examples/PageNavigation) — `main.txl` is the only startup page; a button opens the root-level `test.txl` route.
 - [`Examples/AllFeatures`](Examples/AllFeatures) — a documented sample covering imported functions, JSON collections, guarded file access, HTTP, timers, SQLite parameters/transactions, dialogs, UI state, media, and more. Its small local MP4 makes the media example portable.
 
-The VS Code extension provides highlighting, snippets, context-aware completions, hover help, formatting, a TXL file-icon theme, and **TXL: Preview Active Project**. The preview opens a native WPF window on Windows; it is not an embedded editor view. Install the `.vsix` from the release assets using **Extensions: Install from VSIX...**, then choose **TXL File Icons** in **File → Preferences → File Icon Theme** if you want the custom file icon theme.
+The VS Code extension provides highlighting (including HTML inside quoted `html`/`embed` values), snippets, context-aware completions, hover help, formatting, a TXL file-icon theme, and **TXL: Preview Active Project**. The preview opens a native WPF window on Windows; it is not an embedded editor view. Install the `.vsix` from the release assets using **Extensions: Install from VSIX...**, then choose **TXL File Icons** in **File → Preferences → File Icon Theme** if you want the custom file icon theme.
 
 ## Build from source
 
@@ -101,7 +102,7 @@ The lightweight regression harness is also run by the GitHub Actions CI workflow
 
 TXL keeps the language intentionally small. `set`, `if`, `repeat`, `for`, and components expand during compilation. `state` persists text and JSON arrays/objects, and the built-in todo list supports local persistence. Project-relative imports load libraries; custom functions currently have a single return expression. Runtime actions include confined app-data files, HTTP GET/JSON POST (asynchronous I/O), repeating UI timers, and SQLite with named parameters and explicit transactions. Action calls can use `try(operation(...),errorState)` to await and catch a runtime failure. These APIs are synchronous except for HTTP action I/O and are not a general task/thread/socket framework. See the grammar guide for exact syntax and limitations.
 
-There is no hot reload, embedded VS Code preview, component inspector, inline preview diagnostics, responsive layout system, general-purpose `async`/`await`, arbitrary TCP/UDP sockets, or custom modal form builder. Gradients and theme switching are not implemented. TXL now supports `if`/`else`, five headline sizes, style-driven alignment and group layout, rounded buttons, basic strokes and shadows, HTML embedding, safe `mailto:` actions, compiled multi-page navigation, and HTTPS TTF/OTF font packaging. WPF appearance, the legacy WebBrowser renderer, keyboard routing, navigation, fonts, media, and the Windows permission-based updater recovery require real Windows checks. The [language guide](Documentation/GRAMMAR.md) distinguishes implemented features from limitations.
+There is no hot reload, embedded VS Code preview, component inspector, inline preview diagnostics, responsive layout system, general-purpose `async`/`await`, arbitrary TCP/UDP sockets, or custom modal form builder. Gradients and theme switching are not implemented. TXL supports `if`/`else`, five headline sizes, style-driven alignment and group layout, rounded buttons, basic strokes and shadows, HTML embedding through Microsoft Edge WebView2, safe `mailto:` actions, compiled multi-page navigation, and HTTPS TTF/OTF font packaging. WPF appearance, WebView2 Runtime availability and YouTube playback, keyboard routing, navigation, fonts, media, and the Windows permission-based updater recovery require real Windows checks. The [language guide](Documentation/GRAMMAR.md) distinguishes implemented features from limitations.
 
 ## Releases and versioning
 

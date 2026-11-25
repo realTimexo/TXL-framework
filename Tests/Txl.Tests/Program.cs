@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Txl;
 
 var passed = 0;
@@ -378,14 +379,14 @@ Test("HTML and embed aliases generate a WPF browser with safe URL handling", () 
     var parsed = Parser.Parse("embed = \"<h1>TXL</h1>\"\nhtml = https://example.com/embed.html");
     if (parsed.Program?.Nodes is not [Element { Kind: "html", Value: var inline }, Element { Kind: "html", Value: var remote }] || inline != "<h1>TXL</h1>" || remote != "https://example.com/embed.html") throw new Exception(string.Join(";", parsed.Diagnostics));
     var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
-    if (!emitted.Contains("FrameworkElement MakeHtml") || !emitted.Contains("NavigateToString(source)") || !emitted.Contains("Embedded HTML URLs must use HTTP or HTTPS") || !emitted.Contains("YoutubeFallback")) throw new Exception("HTML rendering/security or YouTube fallback path missing");
+    if (!emitted.Contains("FrameworkElement MakeHtml") || !emitted.Contains("NavigateToString(source)") || !emitted.Contains("Embedded HTML URLs must use HTTP or HTTPS") || !emitted.Contains("EnsureCoreWebView2Async") || !emitted.Contains("Microsoft Edge WebView2 Runtime")) throw new Exception("modern HTML rendering, URL validation, or missing-runtime guidance is missing");
 });
-Test("YouTube iframe content avoids the legacy IE script error and offers an external-browser link", () =>
+Test("YouTube iframe content is rendered by the modern embedded WebView2 engine", () =>
 {
     var parsed = Parser.Parse("html = \"<iframe src='https://www.youtube.com/embed/BSKHG42t89Q'></iframe>\"");
     if (parsed.Program is null) throw new Exception(string.Join(";", parsed.Diagnostics));
     var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), parsed.Program, ".");
-    if (!emitted.Contains("youtube(?:-nocookie)?\\.com") || !emitted.Contains("Open video in browser") || !emitted.Contains("UseShellExecute=true")) throw new Exception("YouTube embed fallback was not emitted");
+    if (!emitted.Contains("Microsoft.Web.WebView2.Wpf") || !emitted.Contains("new WebView2") || !emitted.Contains("NavigateToString(source)") || emitted.Contains("legacy Windows HTML control cannot play modern YouTube embeds")) throw new Exception("YouTube iframe is not routed to the modern embedded HTML engine");
 });
 
 Test("mailto is accepted by the safe open action", () =>
@@ -400,9 +401,10 @@ Test("page navigation compiles distinct page views and pushes current-page histo
     var main = Parser.Parse("button = Business\naction = page(business.txl)", "main.txl");
     var business = Parser.ParseAdditionalPage("text.headline = Business page", "business.txl");
     if (main.Program is null || business.Program is null) throw new Exception(string.Join(";", main.Diagnostics.Concat(business.Diagnostics)));
+    if (main.Program.Nodes.OfType<Element>().Single().Properties.GetValueOrDefault("action") != "page(business.txl)") throw new Exception("button page action was not attached to the button");
     var pages = new Dictionary<string, ProgramAst>(StringComparer.OrdinalIgnoreCase) { ["main.txl"] = main.Program, ["business.txl"] = business.Program };
     var emitted = WpfEmitter.Emit(new ProjectInfo("Test", "1.0.0", "TXL", "test", "main.txl", null, new WindowInfo()), main.Program, ".", pages);
-    if (!emitted.Contains("case \"business.txl\":{") || !emitted.Contains("Business page") || !emitted.Contains("history.Push(currentPage)") || !emitted.Contains("Page must be a project-relative .txl file")) throw new Exception("page compilation, root validation, or back history missing");
+    if (!emitted.Contains("ShowPage(\"main.txl\",false)") || !emitted.Contains("case \"business.txl\":{") || !emitted.Contains("Business page") || !emitted.Contains("history.Push(currentPage)") || !emitted.Contains("Page must be a project-relative .txl file") || !emitted.Contains("Action(action)")) throw new Exception("main page must be the only startup view; other compiled pages should be reached by action and retain safe back history");
 });
 Test("remote font URLs require HTTPS and explicit TTF or OTF extensions", () =>
 {
@@ -420,6 +422,14 @@ Test("VS Code starter includes a window block and foundational TXL structure", (
     if (!File.Exists(starterFile)) throw new Exception("run the harness from the repository root");
     var extension = File.ReadAllText(starterFile);
     if (!extension.Contains("'window ('") || !extension.Contains("'style ('") || !extension.Contains("'actions ('") || !extension.Contains("'group = main ('")) throw new Exception("starter structure is incomplete");
+    var grammarFile = Path.Combine(Directory.GetCurrentDirectory(), "VSCodeExtension", "syntaxes", "txl.tmLanguage.json");
+    using var grammar = JsonDocument.Parse(File.ReadAllText(grammarFile));
+    var grammarText = grammar.RootElement.ToString();
+    if (!grammarText.Contains("text.html.basic") || !grammarText.Contains("htmlValue") || !grammarText.Contains("html|embed")) throw new Exception("quoted HTML values are missing embedded HTML syntax scopes");
+    var packageFile = Path.Combine(Directory.GetCurrentDirectory(), "VSCodeExtension", "package.json");
+    using var package = JsonDocument.Parse(File.ReadAllText(packageFile));
+    var embedded = package.RootElement.GetProperty("contributes").GetProperty("grammars")[0].GetProperty("embeddedLanguages");
+    if (embedded.GetProperty("meta.embedded.html.txl").GetString() != "html") throw new Exception("embedded HTML tokens are not mapped to the HTML language");
 });
 
 Console.WriteLine($"{passed} passed, {failed} failed.");

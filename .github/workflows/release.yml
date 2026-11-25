@@ -43,6 +43,13 @@ jobs:
       - name: Archive AllFeatures source project
         shell: pwsh
         run: git archive --format=zip --prefix=TXL-AllFeatures/ --output=artifacts/TXL-AllFeatures-source-${{ github.ref_name }}.zip $env:GITHUB_REF_NAME Examples/AllFeatures
+      - name: Build page navigation example
+        run: dotnet run --project Compiler/Txl.Cli/Txl.Cli.csproj --configuration Release --no-build -- --build Examples/PageNavigation
+      - name: Package page navigation example
+        shell: pwsh
+        run: |
+          Compress-Archive -Path Examples/PageNavigation/dist/TXL_Page_Navigation_Demo -DestinationPath artifacts/TXL-PageNavigation-${{ github.ref_name }}-win-x64.zip -CompressionLevel Optimal
+          git archive --format=zip --prefix=TXL-PageNavigation/ --output=artifacts/TXL-PageNavigation-source-${{ github.ref_name }}.zip $env:GITHUB_REF_NAME Examples/PageNavigation
       - name: Stage versioned PowerShell installer
         if: ${{ !contains(github.ref_name, '-') }}
         shell: pwsh

@@ -266,7 +266,7 @@ text.headline2 = Heading level two
 text.headline3 = Heading level three
 text.headline4 = Heading level four
 text.headline5 = Heading level five
-embed = "<p><strong>Trusted inline HTML</strong> rendered by WPF WebBrowser.</p>"
+embed = "<p><strong>Trusted inline HTML</strong> rendered by Microsoft Edge WebView2.</p>"
 repeat = 2 (
   text = Compile-time repeat row ${index}
 )

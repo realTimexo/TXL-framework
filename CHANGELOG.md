@@ -2,6 +2,18 @@
 
 Notable changes to TXL are recorded here. Versions follow semantic versioning where practical. The release page contains distributable packages and release-specific installation links.
 
+## [0.9.0-preview.2] — 2026-11-25
+
+### Fixed
+
+- Replaced the legacy WPF WebBrowser with Microsoft Edge WebView2 so trusted inline HTML, local/remote pages, and YouTube iframe embeds render using Chromium. A clear install link appears if the WebView2 Runtime is missing.
+- Added embedded HTML TextMate scopes for quoted `html = "..."` and `embed = "..."` values in VS Code, and registered both names as element syntax.
+- Added a dedicated two-page example and regression coverage proving that `info.json`'s start file is the only startup page and a button action navigates to another compiled `.txl` file.
+
+### Validation
+
+- Release validation is in progress for this preview. WPF playback and rendering still need visual testing on Windows with the WebView2 Runtime installed.
+
 ## [0.9.0-preview.1] — 2026-11-25
 
 ### Added

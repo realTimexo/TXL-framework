@@ -2,6 +2,7 @@
   "scopeName": "source.txl",
   "patterns": [
     { "include": "#lineComment" },
+    { "include": "#htmlValue" },
     { "include": "#strings" },
     { "include": "#hexColor" },
     { "include": "#actions" },
@@ -17,6 +18,21 @@
     "lineComment": {
       "name": "comment.line.number-sign.txl",
       "match": "^\\s*#.*$"
+    },
+    "htmlValue": {
+      "name": "meta.embedded.html.txl",
+      "begin": "^\\s*(html|embed)\\s*=\\s*(\")",
+      "beginCaptures": {
+        "1": { "name": "support.type.element.txl" },
+        "2": { "name": "punctuation.definition.string.begin.txl" }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.txl" }
+      },
+      "patterns": [
+        { "include": "text.html.basic" }
+      ]
     },
     "strings": {
       "name": "string.quoted.double.txl",
@@ -69,7 +85,7 @@
       ]
     },
     "element": {
-      "match": "^\\s*(text|button|image|video|input|checkbox|list|line|space)(?:\\(([^)]+)\\)|\\.([A-Za-z][\\w-]*))?\\s*(=)?",
+      "match": "^\\s*(text|button|image|video|html|embed|input|checkbox|list|line|space)(?:\\(([^)]+)\\)|\\.([A-Za-z][\\w-]*))?\\s*(=)?",
       "captures": {
         "1": { "name": "support.type.element.txl" },
         "2": { "name": "storage.modifier.txl" },
