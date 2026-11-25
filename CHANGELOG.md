@@ -16,7 +16,7 @@ Notable changes to TXL are recorded here. Versions follow semantic versioning wh
 
 - The solution builds in the Linux sandbox; 50 console regression tests pass; the AllFeatures example passes `txl --check` and cross-publishes as a Windows x64 self-contained application. Its generated WPF runtime includes database parameters/transactions and runtime action error handling.
 - This preview does not expose user-written general-purpose `async`/`await`, arbitrary socket networking, database connection pooling, or background worker threads. TXL functions currently have a single return expression and collection loops/components expand at compile time.
-- GitHub's Windows release workflow must pass before these packages are published. Visual WPF behavior and the exact access-denied condition on the user's Windows machine still require manual Windows verification.
+- GitHub's Windows release workflow passed: tag/version validation, the 50-test regression harness, CLI package, VSIX, and self-contained Windows AllFeatures app all succeeded; the prerelease was published with CLI, VSIX, app, and source ZIP assets. Visual WPF behavior and the exact access-denied condition on the user's Windows machine still require manual Windows verification.
 
 ## [0.8.0] — 2026-11-23
 

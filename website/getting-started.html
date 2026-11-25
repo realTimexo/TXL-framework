@@ -15,7 +15,7 @@
 <h2 id="install">1. Install the compiler</h2><p>Open PowerShell. The installer checks for the .NET 9 SDK, installs it in your user profile if needed, downloads the latest CLI package attached to GitHub Releases, and adds the global tool folder to your user PATH.</p><pre>$installer = Join-Path $env:TEMP 'install-txl.ps1'
 Invoke-WebRequest 'https://raw.githubusercontent.com/realTimexo/TXL-framework/main/Installer/install.ps1' -OutFile $installer
 powershell -NoProfile -ExecutionPolicy Bypass -File $installer</pre><p>Open a new terminal after installation. “Global” means usable from any terminal folder for your Windows user; it is not a machine-wide service and does not need administrator rights. The installer requires an available public TXL release package.</p>
-<h2 id="preview">Optional: install the 0.9.0 preview side-by-side</h2><p>The prerelease is not installed by the standard installer or <code>txl --update</code>; those stay on the latest stable release. After the preview release is published, run this in PowerShell to install it in an isolated path without replacing your stable <code>txl</code> command:</p><pre>$version = '0.9.0-preview.1'
+<h2 id="preview">Optional: install the 0.9.0 preview side-by-side</h2><p>The prerelease is not installed by the standard installer or <code>txl --update</code>; those stay on the latest stable release. The preview is now published; run this in PowerShell to install it in an isolated path without replacing your stable <code>txl</code> command:</p><pre>$version = '0.9.0-preview.1'
 $package = Join-Path $env:TEMP "Txl.Cli.$version.nupkg"
 $source = "https://github.com/realTimexo/TXL-framework/releases/download/v$version/Txl.Cli.$version.nupkg"
 Invoke-WebRequest $source -OutFile $package
