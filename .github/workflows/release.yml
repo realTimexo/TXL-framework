@@ -24,6 +24,8 @@ jobs:
         run: |
           $version = (Select-String -Path Compiler/Txl.Cli/Txl.Cli.csproj -Pattern '<PackageVersion>([^<]+)</PackageVersion>').Matches[0].Groups[1].Value
           if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag $env:GITHUB_REF_NAME must match project package version v$version" }
+          $extensionVersion = (Get-Content VSCodeExtension/package.json -Raw | ConvertFrom-Json).version
+          if ($extensionVersion -ne $version) { throw "VS Code extension version $extensionVersion must match CLI package version $version" }
       - name: Build and run tests
         run: |
           dotnet build TXL.slnx --configuration Release

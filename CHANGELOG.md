@@ -2,6 +2,18 @@
 
 Notable changes to TXL are recorded here. Versions follow semantic versioning where practical. The release page contains distributable packages and release-specific installation links.
 
+## [0.9.0] — 2026-11-27
+
+### Added
+
+- Promoted the 0.9 runtime and editor work to stable: imported modules, custom functions, JSON arrays/objects, confined app-data files, HTTP GET/JSON POST, timers, SQLite parameters/transactions, scoped error handling, WebView2 HTML embedding, VS Code HTML highlighting, and compiled page navigation.
+- Corrected the stable release artifacts so the CLI NuGet package, VS Code extension, and `v0.9.0` tag all carry version `0.9.0`. The release workflow now rejects mismatched CLI and extension versions before packaging.
+
+### Validation
+
+- The solution builds and all 50 regression tests pass. The CLI package installs from an isolated local NuGet source and reports `TXL 0.9.0`; the VSIX manifest and lockfile both report `0.9.0`. The GitHub Windows workflow performs the release build and app packaging.
+- Visual WPF behavior, YouTube playback, and Windows user-machine updater execution still require direct Windows checks.
+
 ## [0.9.0-preview.2] — 2026-11-25
 
 ### Fixed

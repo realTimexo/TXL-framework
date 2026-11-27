@@ -3,7 +3,7 @@
   "displayName": "TXL Language Support",
   "description": "Syntax highlighting and editor support for Timexo Language",
   "icon": "icons/txl-language.png",
-  "version": "0.9.0-preview.2",
+  "version": "0.9.0",
   "publisher": "timexo",
   "repository": {
     "type": "git",
